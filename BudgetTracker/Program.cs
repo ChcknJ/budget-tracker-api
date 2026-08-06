@@ -1,6 +1,8 @@
 using BudgetTracker.Database;
-using Microsoft.EntityFrameworkCore;
+using BudgetTracker.Interfaces;
+using BudgetTracker.Services;
 using EFCore.NamingConventions;
+using Microsoft.EntityFrameworkCore;
 
 namespace BudgetTracker
 {
@@ -15,6 +17,9 @@ namespace BudgetTracker
             {
                 option.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")).UseSnakeCaseNamingConvention();
             });
+
+            // Services
+            builder.Services.AddScoped<IAuthService, AuthService>();
 
             // Add services to the container.
 
