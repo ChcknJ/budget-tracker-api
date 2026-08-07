@@ -20,37 +20,28 @@ namespace BudgetTracker.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterRequest request)
         {
-            bool success = await _authService.RegisterAsync(request);
+            var response = await _authService.RegisterAsync(request);
 
-            if (!success)
+            if (!response.Success)
             {
-                return Conflict(new
-                {
-                    message = "Username already exists."
-                });
+                return BadRequest(response);
             }
 
-            return Created();
+            return Created(string.Empty, response);
         }
 
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginRequest request)
         {
-            bool success = await _authService.LoginAsync(request);
+            var response = await _authService.LoginAsync(request);
 
-            if (!success)
+            if (!response.Success)
             {
-                return Unauthorized(new
-                {
-                    message = "Invalid username or password."
-                });
+                return Unauthorized(response);
             }
 
-            return Ok(new
-            {
-                message = "Login successful!"
-            });
+            return Ok(response);
         }
     }
 }

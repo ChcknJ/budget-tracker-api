@@ -1,12 +1,13 @@
 ﻿using BudgetTracker.DTO.Request;
+using BudgetTracker.DTO.Response;
 
 
 namespace BudgetTracker.Interfaces
 {
 public interface IAuthService
     {
-    Task<bool> RegisterAsync(RegisterRequest registerRequest);
-    Task<bool> LoginAsync(LoginRequest loginRequest);
+    Task<LoginResponse> RegisterAsync(RegisterRequest registerRequest);
+    Task<LoginResponse> LoginAsync(LoginRequest loginRequest);
 
     }
 }
