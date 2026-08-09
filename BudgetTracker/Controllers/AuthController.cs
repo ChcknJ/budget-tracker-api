@@ -1,7 +1,9 @@
 ﻿using BudgetTracker.DTO.Request;
 using BudgetTracker.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace BudgetTracker.Controllers
 {
@@ -42,6 +44,16 @@ namespace BudgetTracker.Controllers
             }
 
             return Ok(response);
+        }
+
+        [Authorize] 
+        [HttpGet("test-user")]
+        public IActionResult TestUserExtraction()
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var username = User.FindFirst(ClaimTypes.Name)?.Value;
+
+            return Ok(new { Message = "Token is valid!", UserId = userId, Username = username});
         }
     }
 }

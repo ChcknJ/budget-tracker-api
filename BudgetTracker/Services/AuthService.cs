@@ -81,7 +81,7 @@ namespace BudgetTracker.Services
             }
 
             // Check if user password is correct
-            if (BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.HashPassword))
+            if (!BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.HashPassword))
             {
                 return new LoginResponse
                 {
@@ -99,7 +99,6 @@ namespace BudgetTracker.Services
                 ExpiresAt = expiresAt
             };
         }
-
 
         private string GenerateJwtToken(User user, DateTime expiresAt)
         {
