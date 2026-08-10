@@ -10,6 +10,8 @@
         public string? Description { get; set; }
         public DateOnly Date { get; set; }
 
+
+
         public User User { get; set; } = null!;
         public Category Category { get; set; } = null!;
         public Subscription? Subscription { get; set; }
