@@ -9,18 +9,19 @@ namespace BudgetTracker.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ExpenseController : ControllerBase
+    public class SubscriptionController : ControllerBase
     {
-        private readonly IExpenseService _expenseService;
+        private readonly ISubscriptionService _subscriptionService;
 
-        public ExpenseController(IExpenseService expenseService)
+        public SubscriptionController (ISubscriptionService subscriptionService)
         {
-            _expenseService = expenseService;
+            _subscriptionService = subscriptionService;
         }
 
+
         [Authorize]
-        [HttpPost("create-expense")]
-        public async Task<IActionResult> CreateExpenseAsync (ExpenseRequest request)
+        [HttpPost("create-subscription")]
+        public async Task<IActionResult> CreateSubscriptionAsync (SubscriptionRequest request)
         {
             var userId = GetUserId();
 
@@ -29,36 +30,33 @@ namespace BudgetTracker.Controllers
                 return Unauthorized();
             }
 
-            var response = await _expenseService.CreateExpenseAsync(request, userId.Value);
+            var response = await _subscriptionService.CreateSubscriptionAsync(userId.Value, request);
 
             return Ok(response);
         }
 
-
         [Authorize]
-        [HttpPatch("edit-expense/{expenseId}")]
-        public async Task<IActionResult> UpdateExpenseAsync (ExpenseRequest request, Guid expenseId)
+        [HttpPatch("edit-subscription/{subscriptionId}")]
+        public async Task<IActionResult> EditSubscriptionAsync (Guid subscriptionId, SubscriptionRequest request)
         {
             var userId = GetUserId();
-
             if (userId == null)
             {
                 return Unauthorized();
             }
 
-            var response = await _expenseService.EditExpenseAsync(userId.Value, expenseId, request);
+            var response = await _subscriptionService.EditSubscriptionAsync(userId.Value, subscriptionId, request);
             if (response == null)
             {
                 return NotFound();
             }
-
             return Ok(response);
         }
 
 
         [Authorize]
-        [HttpGet("get-expenses")]
-        public async Task<IActionResult> GetExpensesAsync ()
+        [HttpDelete("cancel-subscription/{subscriptionId}")]
+        public async Task<IActionResult> CancelSubscriptionAsync (Guid subscriptionId)
         {
             var userId = GetUserId();
 
@@ -67,30 +65,30 @@ namespace BudgetTracker.Controllers
                 return Unauthorized();
             }
 
-            var response = await _expenseService.GetExpensesAsync(userId.Value);
-            return Ok(response);
-        }
-
-
-        [Authorize]
-        [HttpDelete("delete-expense/{expenseId}")]
-        public async Task<IActionResult> DeleteExpenseAsync (Guid expenseId)
-        {
-            var userId = GetUserId();
-
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
-
-            var response = await _expenseService.DeleteExpenseAsync(userId.Value, expenseId);
+            var response = await _subscriptionService.CancelSubscriptionAsync(userId.Value, subscriptionId);
             if (!response)
             {
                 return NotFound();
             }
-
             return NoContent();
         }
+
+
+        [Authorize]
+        [HttpGet("get-subscriptions")]
+        public async Task<IActionResult> GetSubscriptionsAsync()
+        {
+            var userId = GetUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            var response = await _subscriptionService.GetSubscriptionsAsync(userId.Value);
+            return Ok(response);
+        }
+
 
 
         private Guid? GetUserId()

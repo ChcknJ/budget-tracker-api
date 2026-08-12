@@ -1,7 +1,6 @@
 ﻿using BudgetTracker.DTO;
 using BudgetTracker.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -9,18 +8,18 @@ namespace BudgetTracker.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ExpenseController : ControllerBase
+    public class BudgetController : ControllerBase
     {
-        private readonly IExpenseService _expenseService;
+        private readonly IBudgetService _budgetService;
 
-        public ExpenseController(IExpenseService expenseService)
+        public BudgetController(IBudgetService budgetService)
         {
-            _expenseService = expenseService;
+            _budgetService = budgetService;
         }
 
         [Authorize]
-        [HttpPost("create-expense")]
-        public async Task<IActionResult> CreateExpenseAsync (ExpenseRequest request)
+        [HttpPost("create-budget")]
+        public async Task<IActionResult> CreateBudgetAsync(BudgetRequest request)
         {
             var userId = GetUserId();
 
@@ -29,15 +28,18 @@ namespace BudgetTracker.Controllers
                 return Unauthorized();
             }
 
-            var response = await _expenseService.CreateExpenseAsync(request, userId.Value);
-
+            var response = await _budgetService.CreateBudgetAsync(userId.Value, request);
+            if (response == null)
+            {
+                return Conflict("A budget already exists for this month.");
+            }
             return Ok(response);
         }
 
 
         [Authorize]
-        [HttpPatch("edit-expense/{expenseId}")]
-        public async Task<IActionResult> UpdateExpenseAsync (ExpenseRequest request, Guid expenseId)
+        [HttpPatch("edit-budget/{month}")]
+        public async Task<IActionResult> EditBudgetAsync( DateOnly month, BudgetRequest request)
         {
             var userId = GetUserId();
 
@@ -46,19 +48,18 @@ namespace BudgetTracker.Controllers
                 return Unauthorized();
             }
 
-            var response = await _expenseService.EditExpenseAsync(userId.Value, expenseId, request);
+            var response = await _budgetService.EditBudgetAsync( userId.Value, month, request);
             if (response == null)
             {
                 return NotFound();
             }
-
             return Ok(response);
         }
 
 
         [Authorize]
-        [HttpGet("get-expenses")]
-        public async Task<IActionResult> GetExpensesAsync ()
+        [HttpGet("get-budget/{month}")]
+        public async Task<IActionResult> GetBudgetAsync(DateOnly month)
         {
             var userId = GetUserId();
 
@@ -67,29 +68,29 @@ namespace BudgetTracker.Controllers
                 return Unauthorized();
             }
 
-            var response = await _expenseService.GetExpensesAsync(userId.Value);
-            return Ok(response);
-        }
+            var response = await _budgetService.GetBudgetAsync( userId.Value, month);
 
-
-        [Authorize]
-        [HttpDelete("delete-expense/{expenseId}")]
-        public async Task<IActionResult> DeleteExpenseAsync (Guid expenseId)
-        {
-            var userId = GetUserId();
-
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
-
-            var response = await _expenseService.DeleteExpenseAsync(userId.Value, expenseId);
-            if (!response)
+            if (response == null)
             {
                 return NotFound();
             }
+            return Ok(response);
+        }
 
-            return NoContent();
+
+        [Authorize]
+        [HttpGet("get-all-budgets")]
+        public async Task<IActionResult> GetAllBudgetsAsync()
+        {
+            var userId = GetUserId();
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            var response = await _budgetService.GetAllBudgetsAsync(
+                userId.Value);
+            return Ok(response);
         }
 
 

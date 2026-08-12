@@ -1,4 +1,4 @@
-﻿using BudgetTracker.DTO.Request;
+﻿using BudgetTracker.DTO;
 using BudgetTracker.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;

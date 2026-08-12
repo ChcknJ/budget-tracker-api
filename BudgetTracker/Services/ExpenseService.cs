@@ -1,6 +1,5 @@
 ﻿using BudgetTracker.Database;
-using BudgetTracker.DTO.Request;
-using BudgetTracker.DTO.Response;
+using BudgetTracker.DTO;
 using BudgetTracker.Interfaces;
 using BudgetTracker.Models;
 using Microsoft.EntityFrameworkCore;

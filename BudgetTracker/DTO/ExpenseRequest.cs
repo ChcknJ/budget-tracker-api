@@ -1,8 +1,7 @@
-﻿namespace BudgetTracker.DTO.Response
+﻿namespace BudgetTracker.DTO
 {
-    public class ExpenseResponse
+    public class ExpenseRequest
     {
-        public Guid Id { get; set; }
         public Guid CategoryId { get; set; }
         public Guid? SubscriptionId { get; set; }
         public decimal Amount { get; set; }
