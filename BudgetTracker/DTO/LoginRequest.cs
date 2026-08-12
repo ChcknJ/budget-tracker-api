@@ -1,6 +1,6 @@
-﻿namespace BudgetTracker.DTO.Request
+﻿namespace BudgetTracker.DTO
 {
-    public class RegisterRequest
+    public class LoginRequest
     {
         public required string Username { get; set; }
         public required string Password { get; set; }

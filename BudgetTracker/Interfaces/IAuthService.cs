@@ -1,5 +1,4 @@
-﻿using BudgetTracker.DTO.Request;
-using BudgetTracker.DTO.Response;
+﻿using BudgetTracker.DTO;
 
 
 namespace BudgetTracker.Interfaces

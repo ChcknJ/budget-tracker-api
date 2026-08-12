@@ -1,7 +1,6 @@
 ﻿using BudgetTracker.Configs;
 using BudgetTracker.Database;
-using BudgetTracker.DTO.Request;
-using BudgetTracker.DTO.Response;
+using BudgetTracker.DTO;
 using BudgetTracker.Interfaces;
 using BudgetTracker.Models;
 using Microsoft.EntityFrameworkCore;
@@ -81,7 +80,7 @@ namespace BudgetTracker.Services
             }
 
             // Check if user password is correct
-            if (BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.HashPassword))
+            if (!BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.HashPassword))
             {
                 return new LoginResponse
                 {
@@ -99,7 +98,6 @@ namespace BudgetTracker.Services
                 ExpiresAt = expiresAt
             };
         }
-
 
         private string GenerateJwtToken(User user, DateTime expiresAt)
         {

@@ -49,6 +49,9 @@ namespace BudgetTracker
 
             // Services
             builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<IExpenseService, ExpenseService>();
+            builder.Services.AddScoped<ICategoryService, CategoryService>();
+            builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 
             // Add services to the container.
 

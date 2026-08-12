@@ -1,4 +1,4 @@
-﻿namespace BudgetTracker.DTO.Response
+﻿namespace BudgetTracker.DTO
 {
     public class LoginResponse
     {
