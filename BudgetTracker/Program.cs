@@ -7,6 +7,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using FluentValidation;
+using BudgetTracker.Validators;
 
 namespace BudgetTracker
 {
@@ -52,6 +54,9 @@ namespace BudgetTracker
             builder.Services.AddScoped<IExpenseService, ExpenseService>();
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+
+            // Validation
+            builder.Services.AddValidatorsFromAssemblyContaining<ExpenseRequestValidator>();
 
             // Add services to the container.
 
