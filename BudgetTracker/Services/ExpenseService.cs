@@ -89,20 +89,51 @@ namespace BudgetTracker.Services
             return true;
         }
 
-        public async Task<List<ExpenseResponse>> GetExpensesAsync (Guid userId)
+        public async Task<List<ExpenseResponse>> GetExpensesAsync (Guid userId, ExpenseFilterRequest filter)
         {
-            List<ExpenseResponse> result = await _context.Expenses.Where(expense => expense.UserId == userId).Select(expense => new ExpenseResponse
+            var query =  _context.Expenses.Where(expense => expense.UserId == userId); 
+
+            if (filter.CategoryId.HasValue)
             {
-                Id = expense.Id,
-                CategoryId = expense.CategoryId,
-                SubscriptionId = expense.SubscriptionId,
-                Amount = expense.Amount,
-                Description = expense.Description,
-                Date = expense.Date
-                
+                query = query.Where(e => e.CategoryId == filter.CategoryId);
+            }
+
+            if (filter.SubscriptionId.HasValue)
+            {
+                query = query.Where(e => e.SubscriptionId == filter.SubscriptionId);
+            }
+
+            if (filter.FromDate.HasValue)
+            {
+                query = query.Where(e => e.Date >= filter.FromDate);
+            }
+
+            if (filter.ToDate.HasValue)
+            {
+                query = query.Where(e => e.Date <= filter.ToDate);
+            }
+
+            if (filter.MinimumAmount.HasValue)
+            {
+                query = query.Where(e => e.Amount >= filter.MinimumAmount);
+            }
+
+            if (filter.MaximumAmount.HasValue)
+            {
+                query = query.Where(e => e.Amount <= filter.MaximumAmount);
+            }
+
+            var response = await query.Select(e => new ExpenseResponse
+            {
+                Id = e.Id,
+                CategoryId = e.CategoryId,
+                SubscriptionId = e.SubscriptionId,
+                Amount = e.Amount,
+                Description = e.Description,
+                Date = e.Date
             }).ToListAsync();
 
-            return result;
+            return response;
         }
     }
 }
