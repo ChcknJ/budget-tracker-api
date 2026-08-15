@@ -54,6 +54,7 @@ namespace BudgetTracker
             builder.Services.AddScoped<IExpenseService, ExpenseService>();
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+            builder.Services.AddScoped<ISummaryService, SummaryService>();
 
             // Validation
             builder.Services.AddValidatorsFromAssemblyContaining<ExpenseRequestValidator>();
