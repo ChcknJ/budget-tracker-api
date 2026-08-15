@@ -58,7 +58,7 @@ namespace BudgetTracker.Controllers
 
         [Authorize]
         [HttpGet("get-expenses")]
-        public async Task<IActionResult> GetExpensesAsync (ExpenseFilterRequest filter)
+        public async Task<IActionResult> GetExpensesAsync ([FromQuery] ExpenseQueryRequest query)
         {
             var userId = GetUserId();
 
@@ -67,7 +67,7 @@ namespace BudgetTracker.Controllers
                 return Unauthorized();
             }
 
-            var response = await _expenseService.GetExpensesAsync(userId.Value, filter);
+            var response = await _expenseService.GetExpensesAsync(userId.Value, query);
             return Ok(response);
         }
 
