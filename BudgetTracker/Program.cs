@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using FluentValidation;
 using BudgetTracker.Validators;
+using BudgetTracker.Exceptions;
 
 namespace BudgetTracker
 {
@@ -55,6 +56,7 @@ namespace BudgetTracker
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
             builder.Services.AddScoped<ISummaryService, SummaryService>();
+            builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
             // Validation
             builder.Services.AddValidatorsFromAssemblyContaining<ExpenseRequestValidator>();
@@ -72,6 +74,8 @@ namespace BudgetTracker
             {
                 app.MapOpenApi();
             }
+
+            app.UseExceptionHandler();
 
             app.UseHttpsRedirection();
 
