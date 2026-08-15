@@ -3,6 +3,7 @@ using BudgetTracker.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 namespace BudgetTracker.Controllers
@@ -19,6 +20,7 @@ namespace BudgetTracker.Controllers
             _authService = authService;
         }
 
+        [EnableRateLimiting("Auth")]
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterRequest request)
         {
@@ -33,6 +35,7 @@ namespace BudgetTracker.Controllers
         }
 
 
+        [EnableRateLimiting("Auth")]
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginRequest request)
         {
@@ -46,14 +49,6 @@ namespace BudgetTracker.Controllers
             return Ok(response);
         }
 
-        [Authorize] 
-        [HttpGet("test-user")]
-        public IActionResult TestUserExtraction()
-        {
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            var username = User.FindFirst(ClaimTypes.Name)?.Value;
 
-            return Ok(new { Message = "Token is valid!", UserId = userId, Username = username});
-        }
     }
 }

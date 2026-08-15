@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using FluentValidation;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using BudgetTracker.Validators;
 using BudgetTracker.Exceptions;
 
@@ -67,6 +69,25 @@ namespace BudgetTracker
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
 
+            // rate limiter
+            builder.Services.AddRateLimiter(options =>
+            {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+                options.AddFixedWindowLimiter("General", limiterOptions =>
+                {
+                    limiterOptions.PermitLimit = 10;
+                    limiterOptions.Window = TimeSpan.FromMinutes(1);
+                });
+
+                options.AddFixedWindowLimiter("Auth", limiterOptions =>
+                {
+                    limiterOptions.PermitLimit = 5;
+                    limiterOptions.Window = TimeSpan.FromMinutes(1);
+                });
+            });
+
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -75,9 +96,11 @@ namespace BudgetTracker
                 app.MapOpenApi();
             }
 
-            app.UseExceptionHandler();
+            app.UseExceptionHandler(options => { });
 
             app.UseHttpsRedirection();
+
+            app.UseRateLimiter();
 
             app.UseAuthentication();
 

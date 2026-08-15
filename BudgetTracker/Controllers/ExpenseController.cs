@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace BudgetTracker.Controllers
 {
@@ -19,6 +20,7 @@ namespace BudgetTracker.Controllers
         }
 
         [Authorize]
+        [EnableRateLimiting("General")]
         [HttpPost("create-expense")]
         public async Task<IActionResult> CreateExpenseAsync (ExpenseRequest request)
         {
@@ -36,6 +38,7 @@ namespace BudgetTracker.Controllers
 
 
         [Authorize]
+        [EnableRateLimiting("General")]
         [HttpPatch("edit-expense/{expenseId}")]
         public async Task<IActionResult> UpdateExpenseAsync (ExpenseRequest request, Guid expenseId)
         {
@@ -57,6 +60,7 @@ namespace BudgetTracker.Controllers
 
 
         [Authorize]
+        [EnableRateLimiting("General")]
         [HttpGet("get-expenses")]
         public async Task<IActionResult> GetExpensesAsync ([FromQuery] ExpenseQueryRequest query)
         {
@@ -73,6 +77,7 @@ namespace BudgetTracker.Controllers
 
 
         [Authorize]
+        [EnableRateLimiting("General")]
         [HttpDelete("delete-expense/{expenseId}")]
         public async Task<IActionResult> DeleteExpenseAsync (Guid expenseId)
         {
