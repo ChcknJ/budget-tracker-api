@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="BudgetTracker.Tests/BudgetTracker.Tests.csproj" Id="51ddd0e4-f450-4d48-acba-5dd62356abec" />
   <Project Path="BudgetTracker/BudgetTracker.csproj" />
 </Solution>
