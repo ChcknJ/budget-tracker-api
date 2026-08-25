@@ -1,8 +1,5 @@
 using BudgetTracker.Configs;
 using BudgetTracker.Database;
-using BudgetTracker.Interfaces;
-using BudgetTracker.Services;
-using EFCore.NamingConventions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -10,8 +7,18 @@ using System.Text;
 using FluentValidation;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
-using BudgetTracker.Validators;
 using BudgetTracker.Exceptions;
+using BudgetTracker.Features.Auth.Interfaces;
+using BudgetTracker.Features.Auth.Services;
+using BudgetTracker.Features.Categories.Interfaces;
+using BudgetTracker.Features.Categories.Services;
+using BudgetTracker.Features.Expenses.Interfaces;
+using BudgetTracker.Features.Expenses.Services;
+using BudgetTracker.Features.Subscriptions.Interfaces;
+using BudgetTracker.Features.Subscriptions.Services;
+using BudgetTracker.Features.Summary;
+using BudgetTracker.Features.Summary.Services;
+using BudgetTracker.Features.Expenses.Validators;
 
 namespace BudgetTracker
 {
