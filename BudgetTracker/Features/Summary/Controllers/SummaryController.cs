@@ -1,4 +1,4 @@
-﻿using BudgetTracker.Features.Summary;
+﻿using BudgetTracker.Features.Summary.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

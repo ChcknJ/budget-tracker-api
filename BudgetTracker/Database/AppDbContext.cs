@@ -46,6 +46,11 @@ namespace BudgetTracker.Database
                 .HasIndex(b => new { b.UserId, b.Month })
                 .IsUnique();
 
+            // Email address must be unique.
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.EmailAddress)
+                .IsUnique();
+
             // Make a set of categories for all users.
             modelBuilder.Entity<Category>().HasData(
                 new Category

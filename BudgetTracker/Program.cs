@@ -1,4 +1,3 @@
-using BudgetTracker.Configs;
 using BudgetTracker.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -16,9 +15,12 @@ using BudgetTracker.Features.Expenses.Interfaces;
 using BudgetTracker.Features.Expenses.Services;
 using BudgetTracker.Features.Subscriptions.Interfaces;
 using BudgetTracker.Features.Subscriptions.Services;
-using BudgetTracker.Features.Summary;
 using BudgetTracker.Features.Summary.Services;
 using BudgetTracker.Features.Expenses.Validators;
+using BudgetTracker.Database.Configs;
+using BudgetTracker.Features.Summary.Interfaces;
+using BudgetTracker.Features.Auth.Validators;
+using BudgetTracker.Filters;
 
 namespace BudgetTracker
 {
@@ -37,6 +39,7 @@ namespace BudgetTracker
             // Jwt Config
             builder.Services.Configure<JwtSettings>(
                 builder.Configuration.GetSection("Jwt"));
+
             builder.Services
                 .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
@@ -60,7 +63,7 @@ namespace BudgetTracker
                 });
 
             // Services
-            builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<IWriteAuthServices, AuthService>();
             builder.Services.AddScoped<IExpenseService, ExpenseService>();
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
@@ -68,11 +71,17 @@ namespace BudgetTracker
             builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
             // Validation
-            builder.Services.AddValidatorsFromAssemblyContaining<ExpenseRequestValidator>();
+            builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
 
             // Add services to the container.
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers(options =>
+            {
+                options.Filters.Add<ValidationFilter>();
+            });
+
+
+
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
 

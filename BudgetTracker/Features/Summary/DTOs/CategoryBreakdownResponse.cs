@@ -1,6 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 
-namespace BudgetTracker.Features.Summary
+namespace BudgetTracker.Features.Summary.DTOs
 {
     public class CategoryBreakdownResponse
     {

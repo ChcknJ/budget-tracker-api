@@ -1,4 +1,6 @@
-﻿namespace BudgetTracker.Features.Summary
+﻿using BudgetTracker.Features.Summary.DTOs;
+
+namespace BudgetTracker.Features.Summary.Interfaces
 {
     public interface ISummaryService
     {

@@ -28,7 +28,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Features\Auth\Validators\" />
     <Folder Include="Features\Users\DTOs\" />
     <Folder Include="Features\Users\Interfaces\" />
     <Folder Include="Features\Users\Controllers\" />

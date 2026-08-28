@@ -1,18 +1,20 @@
-﻿using BudgetTracker.Configs;
-using BudgetTracker.Database;
+﻿using BudgetTracker.Database;
+using BudgetTracker.Database.Configs;
 using BudgetTracker.Features.Auth.DTOs;
 using BudgetTracker.Features.Auth.Interfaces;
+using BudgetTracker.Features.Auth.Models;
 using BudgetTracker.Features.Users.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace BudgetTracker.Features.Auth.Services
 {
-    public class AuthService : IAuthService
+    public class AuthService : IWriteAuthServices
     {
         private readonly AppDbContext _context;
         private readonly JwtSettings _jwtSettings;
@@ -24,81 +26,210 @@ namespace BudgetTracker.Features.Auth.Services
         }
 
 
-        public async Task<LoginResponse> RegisterAsync(RegisterRequest registerRequest)
-        {
-            // chech if account already existing
-            var checkUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == registerRequest.Username);
 
-            // if user is not null means user already has account
-            if (checkUser != null)
+        public async Task<AuthResult> RegisterAsync(RegisterRequest registerRequest, CancellationToken cancellationToken)
+        {
+            // Check for email duplicate
+            var emailDuplicates = await _context.Users.FirstOrDefaultAsync(u => u.EmailAddress == registerRequest.EmailAddress, cancellationToken);
+
+            if (emailDuplicates != null)
             {
-                return new LoginResponse
-                {
-                    Success = false,
-                    ErrorMessage = "User already existed",
-                };
+                return new AuthResult(
+                    Success: false,
+                    ErrorType: AuthErrorType.InvalidEmailAddress,
+                    ErrorMessage: "Email Address is already in use.",
+                    Response: null);
             }
 
-            // hash password
-            string hashPass = BCrypt.Net.BCrypt.HashPassword(registerRequest.Password);
+            
+            string passHash = BCrypt.Net.BCrypt.HashPassword(registerRequest.Password);
+            DateTime createdAt = DateTime.UtcNow;
 
-            // create user
+            // Create and save User to db
             var user = new User
             {
                 Username = registerRequest.Username,
-                PasswordHash = hashPass,
-                EmailAddress = "sample@"
+                PasswordHash = passHash,
+                EmailAddress = registerRequest.EmailAddress,
+                CreatedAt = createdAt
             };
-
-            await _context.Users.AddAsync(user);
-            await _context.SaveChangesAsync();
-
-            // Generate token to make user authorize
-            DateTime expiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryMinutes);
-            string token = GenerateJwtToken(user, expiresAt);
-
-            return new LoginResponse
-            {
-                Success = true,
-                Token = token,
-                ExpiresAt = expiresAt
-            };
+            await _context.Users.AddAsync(user, cancellationToken);
+            return await IssueTokensAsync(user, cancellationToken);
         }  
 
-        public async Task<LoginResponse> LoginAsync(LoginRequest loginRequest)
-        {
-            // look for the user if it is in the db
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == loginRequest.Username);
 
-            // Check if user has account registered
-            if (user == null)
+        public async Task<AuthResult> LoginAsync(LoginRequest loginRequest, CancellationToken cancellationToken)
+        {
+            // Check if there is account connected to email
+            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.EmailAddress == loginRequest.EmailAddress, cancellationToken);
+            if (existingUser == null)
             {
-                return new LoginResponse
-                { 
-                    Success = false,
-                    ErrorMessage = "No user found!"
-                };
+                return new AuthResult(
+                    Success: false,
+                    ErrorType: AuthErrorType.InvalidEmailAddress,
+                    ErrorMessage: "Email or password is incorrect.",
+                    Response: null);
             }
+
+
 
             // Check if user password is correct
-            if (!BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.PasswordHash))
+            if (!BCrypt.Net.BCrypt.Verify(loginRequest.Password, existingUser.PasswordHash))
             {
-                return new LoginResponse
-                {
-                    Success = false,
-                    ErrorMessage = "Incorrect Password"
-                };
+                return new AuthResult(
+                    Success: false,
+                    ErrorType: AuthErrorType.IncorrectCredentials,
+                    ErrorMessage: "Email or password is incorrect.",
+                    Response: null);
             }
 
-            DateTime expiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryMinutes);
-            // Log in the user
-            return new LoginResponse
-            {
-                Success = true,
-                Token = GenerateJwtToken(user, expiresAt),
-                ExpiresAt = expiresAt
-            };
+            return await IssueTokensAsync(existingUser, cancellationToken);
         }
+
+
+        public async Task<AuthResult> RefreshAsync(RefreshRequest refreshRequest, CancellationToken cancellationToken)
+        {
+            // Convert input string to byte and hash
+            string tokenHash;
+            try
+            {
+                byte[] bytes = Convert.FromBase64String(refreshRequest.RefreshToken);
+                tokenHash = Convert.ToBase64String(SHA256.HashData(bytes));
+            }
+            catch (Exception)
+            {
+                return new AuthResult(
+                    Success: false,
+                    ErrorType: AuthErrorType.IncorrectCredentials,
+                    ErrorMessage: "Invalid credentials.",
+                    Response: null);
+            }
+
+            // Compare hashed input string to the db.
+            var existingToken = await _context.RefreshTokens.FirstOrDefaultAsync(token => token.TokenHash == tokenHash, cancellationToken);
+            if (existingToken == null)
+            {
+                return new AuthResult(
+                    Success: false,
+                    ErrorType: AuthErrorType.IncorrectCredentials,
+                    ErrorMessage: "Something went wrong.",
+                    Response: null);
+            }
+
+
+            // Check if token is not expired.
+            DateTime dateNow = DateTime.UtcNow;
+            if (dateNow > existingToken.ExpiresAt)
+            {
+                return new AuthResult(
+                    Success: false,
+                    ErrorType: AuthErrorType.IncorrectCredentials,
+                    ErrorMessage: "Something went wrong.",
+                    Response: null);
+            }
+
+
+            // Check if token has not been used twice.
+            if (existingToken.RevokedAt != null)
+            {
+                // Revoke all non revoked tokens of the user.
+                var activeTokens = await _context.RefreshTokens
+                    .Where(t => t.UserId == existingToken.UserId && t.RevokedAt == null)
+                    .ToListAsync(cancellationToken);
+
+                foreach (var t in activeTokens)
+                {
+                    t.RevokedAt = dateNow;
+                }
+                await _context.SaveChangesAsync(cancellationToken);
+
+
+                return new AuthResult(
+                    Success: false,
+                    ErrorType: AuthErrorType.IncorrectCredentials,
+                    ErrorMessage: "Something went wrong.",
+                    Response: null);
+                
+            }
+
+
+
+            // Issue a new refresh token
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == existingToken.UserId, cancellationToken);
+            if (user == null)
+            {
+                return new AuthResult(
+                    Success: false,
+                    ErrorType: AuthErrorType.IncorrectCredentials,
+                    ErrorMessage: "Something went wrong.",
+                    Response: null);
+            }
+            // Update the existing token
+            existingToken.RevokedAt = dateNow;
+
+            // Generate JWT
+            string accessToken = GenerateJwtToken(user, dateNow.AddMinutes(_jwtSettings.ExpiryMinutes));
+
+            // Generate new refresh Token
+            var (refreshTokenPlain, newToken) = await GenerateRefreshToken(user, dateNow.AddDays(_jwtSettings.RefreshTokenExpiryDays), cancellationToken);
+            // Connect the old token to new one.
+            existingToken.ReplacedBy = newToken;
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return new AuthResult(
+                    Success: true,
+                    ErrorType: null,
+                    ErrorMessage: null,
+                    Response: new AuthResponse(
+                        AccessToken: accessToken,
+                        RefreshToken: refreshTokenPlain));
+        }
+
+
+        public async Task<AuthResult> LogoutAsync(RefreshRequest refreshRequest, CancellationToken cancellationToken)
+        {
+            // Convert input string to byte and hash
+            string tokenHash;
+            try
+            {
+                byte[] bytes = Convert.FromBase64String(refreshRequest.RefreshToken);
+                tokenHash = Convert.ToBase64String(SHA256.HashData(bytes));
+            }
+            catch (Exception)
+            {
+                return new AuthResult(
+                    Success: false,
+                    ErrorType: AuthErrorType.IncorrectCredentials,
+                    ErrorMessage: "Invalid credentials.",
+                    Response: null);
+            }
+
+            // Check the token and revoke it making it unusable.
+            var existingToken = await _context.RefreshTokens.FirstOrDefaultAsync(t => t.TokenHash == tokenHash, cancellationToken);
+            if (existingToken != null)
+            {
+                existingToken.RevokedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
+            return new AuthResult(
+                Success: true, 
+                ErrorType: null, 
+                ErrorMessage: null, 
+                Response: null);
+        }
+
+        
+
+
+
+
+
+
+
+
+
 
         private string GenerateJwtToken(User user, DateTime expiresAt)
         {
@@ -122,5 +253,44 @@ namespace BudgetTracker.Features.Auth.Services
             return new JwtSecurityTokenHandler()
                 .WriteToken(token);
         }
+
+        private async Task<(string PlainToken, RefreshToken Entity)> GenerateRefreshToken(User user, DateTime expiresAt, CancellationToken cancellationToken)
+        {
+            // Generates random string
+            byte[] randomBytes = RandomNumberGenerator.GetBytes(32);
+
+
+            // Hash string
+            string tokenHash = Convert.ToBase64String(SHA256.HashData(randomBytes));
+
+            // Create refresh token model
+            var refreshToken = new RefreshToken
+            {
+                TokenHash = tokenHash,
+                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = expiresAt,
+                User = user
+            };
+
+            // Save to db
+            await _context.RefreshTokens.AddAsync(refreshToken, cancellationToken);
+
+            return (Convert.ToBase64String(randomBytes), refreshToken);
+        }
+
+        private async Task<AuthResult> IssueTokensAsync(User user, CancellationToken cancellationToken)
+        {
+            DateTime now = DateTime.UtcNow;
+            string accessToken = GenerateJwtToken(user, now.AddMinutes(_jwtSettings.ExpiryMinutes));
+            var (refreshTokenPlain, _) = await GenerateRefreshToken(user, now.AddDays(_jwtSettings.RefreshTokenExpiryDays), cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return new AuthResult(
+                Success: true,
+                ErrorType: null,
+                ErrorMessage: null,
+                Response: new AuthResponse(AccessToken: accessToken, RefreshToken: refreshTokenPlain));
+        }
+
     }
 }

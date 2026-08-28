@@ -1,5 +1,6 @@
 ﻿using BudgetTracker.Database;
-using BudgetTracker.Features.Summary;
+using BudgetTracker.Features.Summary.DTOs;
+using BudgetTracker.Features.Summary.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace BudgetTracker.Features.Summary.Services
