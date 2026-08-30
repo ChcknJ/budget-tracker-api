@@ -1,0 +1,53 @@
+﻿using BudgetTracker.Features.Summary.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Security.Claims;
+
+namespace BudgetTracker.Features.Summary.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class SummaryController : ControllerBase
+    {
+        private readonly ISummaryService _summaryService;
+
+        public SummaryController(ISummaryService summary)
+        {
+            _summaryService = summary;
+        }
+
+        [EnableRateLimiting("General")]
+        [Authorize]
+        [HttpGet("get-summary")]
+        public async Task<IActionResult> GetSummaryAsync(DateOnly month, CancellationToken cancellationToken)
+        {
+            var userId = GetUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            var response = await _summaryService.GetSummaryAsync(userId.Value, month, cancellationToken);
+            return Ok(response);
+        }
+
+        private Guid? GetUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null)
+            {
+                return null;
+            }
+
+            if (!Guid.TryParse(userIdClaim.Value, out Guid userId))
+            {
+                return null;
+            }
+
+            return userId;
+        }
+    }
+}

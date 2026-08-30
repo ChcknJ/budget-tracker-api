@@ -1,17 +1,28 @@
-using BudgetTracker.Configs;
 using BudgetTracker.Database;
-using BudgetTracker.Interfaces;
-using BudgetTracker.Services;
-using EFCore.NamingConventions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using FluentValidation;
-using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
-using BudgetTracker.Validators;
 using BudgetTracker.Exceptions;
+using BudgetTracker.Features.Auth.Interfaces;
+using BudgetTracker.Features.Auth.Services;
+using BudgetTracker.Features.Categories.Interfaces;
+using BudgetTracker.Features.Categories.Services;
+using BudgetTracker.Features.Expenses.Interfaces;
+using BudgetTracker.Features.Expenses.Services;
+using BudgetTracker.Features.Subscriptions.Interfaces;
+using BudgetTracker.Features.Subscriptions.Services;
+using BudgetTracker.Features.Budgets.Interfaces;
+using BudgetTracker.Features.Budgets.Services;
+using BudgetTracker.Features.Summary.Services;
+using BudgetTracker.Features.Users.Interfaces;
+using BudgetTracker.Features.Users.Services;
+using BudgetTracker.Database.Configs;
+using BudgetTracker.Features.Summary.Interfaces;
+using BudgetTracker.Features.Auth.Validators;
+using BudgetTracker.Filters;
 
 namespace BudgetTracker
 {
@@ -30,6 +41,7 @@ namespace BudgetTracker
             // Jwt Config
             builder.Services.Configure<JwtSettings>(
                 builder.Configuration.GetSection("Jwt"));
+
             builder.Services
                 .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
@@ -53,19 +65,41 @@ namespace BudgetTracker
                 });
 
             // Services
-            builder.Services.AddScoped<IAuthService, AuthService>();
-            builder.Services.AddScoped<IExpenseService, ExpenseService>();
-            builder.Services.AddScoped<ICategoryService, CategoryService>();
-            builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+            // Auth
+            builder.Services.AddScoped<IWriteAuthServices, AuthService>();
+            //Expense
+            builder.Services.AddScoped<IReadExpenseService, ExpenseService>();
+            builder.Services.AddScoped<IWriteExpenseService, ExpenseService>();
+            //Category
+            builder.Services.AddScoped<IReadCategoryService, CategoryService>();
+            builder.Services.AddScoped<IWriteCategoryService, CategoryService>();
+            //Subscription
+            builder.Services.AddScoped<IReadSubscriptionService, SubscriptionService>();
+            builder.Services.AddScoped<IWriteSubscriptionService, SubscriptionService>();
+            //Budget
+            builder.Services.AddScoped<IReadBudgetService, BudgetService>();
+            builder.Services.AddScoped<IWriteBudgetService, BudgetService>();
+            //Summary
             builder.Services.AddScoped<ISummaryService, SummaryService>();
+            //User
+            builder.Services.AddScoped<IReadUserService, UserService>();
+            builder.Services.AddScoped<IWriteUserService, UserService>();
+
+
             builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
             // Validation
-            builder.Services.AddValidatorsFromAssemblyContaining<ExpenseRequestValidator>();
+            builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
 
             // Add services to the container.
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers(options =>
+            {
+                options.Filters.Add<ValidationFilter>();
+            });
+
+
+
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
 
