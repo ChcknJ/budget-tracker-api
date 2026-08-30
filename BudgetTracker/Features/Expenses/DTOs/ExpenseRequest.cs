@@ -1,11 +1,9 @@
 ﻿namespace BudgetTracker.Features.Expenses.DTOs
 {
-    public class ExpenseRequest
-    {
-        public Guid CategoryId { get; set; }
-        public Guid? SubscriptionId { get; set; }
-        public decimal Amount { get; set; }
-        public string? Description { get; set; }
-        public DateOnly Date { get; set; }
-    }
+    public record ExpenseRequest(
+        Guid CategoryId,
+        Guid? SubscriptionId,
+        decimal Amount,
+        string? Description,
+        DateOnly Date);
 }

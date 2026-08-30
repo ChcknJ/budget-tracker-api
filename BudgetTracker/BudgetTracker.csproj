@@ -27,12 +27,4 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Features\Users\DTOs\" />
-    <Folder Include="Features\Users\Interfaces\" />
-    <Folder Include="Features\Users\Controllers\" />
-    <Folder Include="Features\Users\Validators\" />
-    <Folder Include="Features\Users\Services\" />
-  </ItemGroup>
-
 </Project>

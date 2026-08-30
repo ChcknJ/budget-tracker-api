@@ -3,6 +3,8 @@
     public enum ExpenseErrorType
     {
         UserNotFound,
-        
+        InvalidRequest,
+        InvalidCategory,
+        InvalidSubsription
     }
 }

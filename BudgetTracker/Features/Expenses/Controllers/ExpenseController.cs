@@ -12,11 +12,13 @@ namespace BudgetTracker.Features.Expenses.Controllers
     [ApiController]
     public class ExpenseController : ControllerBase
     {
-        private readonly IExpenseService _expenseService;
+        private readonly IWriteExpenseService _writExpenseService;
+        private readonly IReadExpenseService _readExpenseService;
 
-        public ExpenseController(IExpenseService expenseService)
+        public ExpenseController(IReadExpenseService readExpenseService, IWriteExpenseService writeExpenseService)
         {
-            _expenseService = expenseService;
+            _writExpenseService = writeExpenseService;
+            _readExpenseService = readExpenseService;
         }
 
         [Authorize]
@@ -31,7 +33,7 @@ namespace BudgetTracker.Features.Expenses.Controllers
                 return Unauthorized();
             }
 
-            var response = await _expenseService.CreateExpenseAsync(request, userId.Value);
+            var response = await _writExpenseService.CreateExpenseAsync(userId.Value, request);
 
             return Ok(response);
         }
@@ -49,7 +51,7 @@ namespace BudgetTracker.Features.Expenses.Controllers
                 return Unauthorized();
             }
 
-            var response = await _expenseService.EditExpenseAsync(userId.Value, expenseId, request);
+            var response = await _writExpenseService.EditExpenseAsync(userId.Value, expenseId, request);
             if (response == null)
             {
                 return NotFound();
@@ -71,7 +73,7 @@ namespace BudgetTracker.Features.Expenses.Controllers
                 return Unauthorized();
             }
 
-            var response = await _expenseService.GetExpensesAsync(userId.Value, query);
+            var response = await _readExpenseService.GetFilteredExpensesAsync(userId.Value, query);
             return Ok(response);
         }
 
@@ -88,13 +90,8 @@ namespace BudgetTracker.Features.Expenses.Controllers
                 return Unauthorized();
             }
 
-            var response = await _expenseService.DeleteExpenseAsync(userId.Value, expenseId);
-            if (!response)
-            {
-                return NotFound();
-            }
-
-            return NoContent();
+            var response = await _writExpenseService.DeleteExpenseAsync(userId.Value, expenseId);
+            return Ok(response);
         }
 
 
