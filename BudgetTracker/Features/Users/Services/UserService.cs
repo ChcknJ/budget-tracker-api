@@ -84,7 +84,7 @@ namespace BudgetTracker.Features.Users.Services
                     Response: null);
             }
 
-            _context.Users.Remove(user);
+            user.DeletedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
             return new UserResult(

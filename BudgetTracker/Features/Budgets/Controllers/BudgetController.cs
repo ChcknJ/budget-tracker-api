@@ -2,6 +2,7 @@
 using BudgetTracker.Features.Budgets.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 namespace BudgetTracker.Features.Budgets.Controllers
@@ -10,13 +11,17 @@ namespace BudgetTracker.Features.Budgets.Controllers
     [ApiController]
     public class BudgetController : ControllerBase
     {
-        private readonly IBudgetService _budgetService;
+        private readonly IWriteBudgetService _writeBudgetService;
+        private readonly IReadBudgetService _readBudgetService;
 
-        public BudgetController(IBudgetService budgetService)
+        public BudgetController(IReadBudgetService readBudgetService, IWriteBudgetService writeBudgetService)
         {
-            _budgetService = budgetService;
+            _writeBudgetService = writeBudgetService;
+            _readBudgetService = readBudgetService;
         }
 
+
+        [EnableRateLimiting("General")]
         [Authorize]
         [HttpPost("create-budget")]
         public async Task<IActionResult> CreateBudgetAsync(BudgetRequest request)
@@ -28,15 +33,12 @@ namespace BudgetTracker.Features.Budgets.Controllers
                 return Unauthorized();
             }
 
-            var response = await _budgetService.CreateBudgetAsync(userId.Value, request);
-            if (response == null)
-            {
-                return Conflict("A budget already exists for this month.");
-            }
+            var response = await _writeBudgetService.CreateBudgetAsync(userId.Value, request);
             return Ok(response);
         }
 
 
+        [EnableRateLimiting("General")]
         [Authorize]
         [HttpPatch("edit-budget/{month}")]
         public async Task<IActionResult> EditBudgetAsync( DateOnly month, BudgetRequest request)
@@ -48,15 +50,12 @@ namespace BudgetTracker.Features.Budgets.Controllers
                 return Unauthorized();
             }
 
-            var response = await _budgetService.EditBudgetAsync( userId.Value, month, request);
-            if (response == null)
-            {
-                return NotFound();
-            }
+            var response = await _writeBudgetService.EditBudgetAsync( userId.Value, month, request);
             return Ok(response);
         }
 
 
+        [EnableRateLimiting("General")]
         [Authorize]
         [HttpGet("get-budget/{month}")]
         public async Task<IActionResult> GetBudgetAsync(DateOnly month)
@@ -68,16 +67,12 @@ namespace BudgetTracker.Features.Budgets.Controllers
                 return Unauthorized();
             }
 
-            var response = await _budgetService.GetBudgetAsync( userId.Value, month);
-
-            if (response == null)
-            {
-                return NotFound();
-            }
+            var response = await _readBudgetService.GetBudgetAsync( userId.Value, month);
             return Ok(response);
         }
 
 
+        [EnableRateLimiting("General")]
         [Authorize]
         [HttpGet("get-all-budgets")]
         public async Task<IActionResult> GetAllBudgetsAsync()
@@ -88,7 +83,7 @@ namespace BudgetTracker.Features.Budgets.Controllers
                 return Unauthorized();
             }
 
-            var response = await _budgetService.GetAllBudgetsAsync(
+            var response = await _readBudgetService.GetAllBudgetsAsync(
                 userId.Value);
             return Ok(response);
         }

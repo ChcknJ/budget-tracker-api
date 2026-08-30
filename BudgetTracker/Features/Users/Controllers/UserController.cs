@@ -1,6 +1,7 @@
 ﻿using BudgetTracker.Features.Users.DTOs;
 using BudgetTracker.Features.Users.Interfaces;
 using BudgetTracker.Features.Users.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
@@ -20,6 +21,8 @@ namespace BudgetTracker.Features.Users.Controllers
             _readUserService = readUserService;
         }
 
+
+        [Authorize]
         [EnableRateLimiting("General")]
         [HttpPost("get-profile")]
         public async Task<IActionResult> GetUserAsync()
@@ -44,6 +47,7 @@ namespace BudgetTracker.Features.Users.Controllers
             return Ok(response);
         }
 
+        [Authorize]
         [EnableRateLimiting("General")]
         [HttpPost("update-profile/{userId}")]
         public async Task<IActionResult> UpdateUserAsync(UpdateUserRequest request)
@@ -68,6 +72,8 @@ namespace BudgetTracker.Features.Users.Controllers
             return Ok(response);
         }
 
+
+        [Authorize]
         [EnableRateLimiting("General")]
         [HttpPost("delete-profile/{userId}")]
         public async Task<IActionResult> DeleteUserAsync()

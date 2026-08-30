@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using FluentValidation;
-using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using BudgetTracker.Exceptions;
 using BudgetTracker.Features.Auth.Interfaces;
@@ -15,8 +14,11 @@ using BudgetTracker.Features.Expenses.Interfaces;
 using BudgetTracker.Features.Expenses.Services;
 using BudgetTracker.Features.Subscriptions.Interfaces;
 using BudgetTracker.Features.Subscriptions.Services;
+using BudgetTracker.Features.Budgets.Interfaces;
+using BudgetTracker.Features.Budgets.Services;
 using BudgetTracker.Features.Summary.Services;
-using BudgetTracker.Features.Expenses.Validators;
+using BudgetTracker.Features.Users.Interfaces;
+using BudgetTracker.Features.Users.Services;
 using BudgetTracker.Database.Configs;
 using BudgetTracker.Features.Summary.Interfaces;
 using BudgetTracker.Features.Auth.Validators;
@@ -63,11 +65,27 @@ namespace BudgetTracker
                 });
 
             // Services
+            // Auth
             builder.Services.AddScoped<IWriteAuthServices, AuthService>();
-            builder.Services.AddScoped<IExpenseService, ExpenseService>();
-            builder.Services.AddScoped<ICategoryService, CategoryService>();
-            builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+            //Expense
+            builder.Services.AddScoped<IReadExpenseService, ExpenseService>();
+            builder.Services.AddScoped<IWriteExpenseService, ExpenseService>();
+            //Category
+            builder.Services.AddScoped<IReadCategoryService, CategoryService>();
+            builder.Services.AddScoped<IWriteCategoryService, CategoryService>();
+            //Subscription
+            builder.Services.AddScoped<IReadSubscriptionService, SubscriptionService>();
+            builder.Services.AddScoped<IWriteSubscriptionService, SubscriptionService>();
+            //Budget
+            builder.Services.AddScoped<IReadBudgetService, BudgetService>();
+            builder.Services.AddScoped<IWriteBudgetService, BudgetService>();
+            //Summary
             builder.Services.AddScoped<ISummaryService, SummaryService>();
+            //User
+            builder.Services.AddScoped<IReadUserService, UserService>();
+            builder.Services.AddScoped<IWriteUserService, UserService>();
+
+
             builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
             // Validation

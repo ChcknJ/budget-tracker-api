@@ -2,9 +2,7 @@
 
 namespace BudgetTracker.Features.Summary.DTOs
 {
-    public class CategoryBreakdownResponse
-    {
-        public required string Name { get; set; }
-        public decimal TotalExpense { get; set; }
-    }
+    public record CategoryBreakdownResponse(
+        string Name,
+        decimal TotalExpense);
 }

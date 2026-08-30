@@ -3,6 +3,7 @@ using BudgetTracker.Features.Categories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 namespace BudgetTracker.Features.Categories.Controllers
@@ -11,13 +12,18 @@ namespace BudgetTracker.Features.Categories.Controllers
     [ApiController]
     public class CategoryController : ControllerBase
     {
-        private readonly ICategoryService _categoryService;
+        private readonly IReadCategoryService _readCategoryService;
+        private readonly IWriteCategoryService _writeCategoryService;
 
-        public CategoryController(ICategoryService categoryService)
+        public CategoryController(IReadCategoryService readCategoryService, IWriteCategoryService writeCategoryService)
         {
-            _categoryService = categoryService;
+            _readCategoryService = readCategoryService;
+            _writeCategoryService = writeCategoryService;
         }
 
+
+
+        [EnableRateLimiting("General")]
         [Authorize]
         [HttpPost("create-category")]
         public async Task<IActionResult> CreateCategoryAsync(CategoryRequest request)
@@ -29,10 +35,12 @@ namespace BudgetTracker.Features.Categories.Controllers
                 return Unauthorized();
             }
 
-            var response = await _categoryService.CreateCategoryAsync(userIdClaim.Value, request);
+            var response = await _writeCategoryService.CreateCategoryAsync(userIdClaim.Value, request);
             return Ok(response);
         }
 
+
+        [EnableRateLimiting("General")]
         [Authorize]
         [HttpPatch("edit-category/{categoryId}")]
         public async Task<IActionResult> EditCategoryAsync(Guid categoryId, CategoryRequest request)
@@ -44,14 +52,12 @@ namespace BudgetTracker.Features.Categories.Controllers
                 return Unauthorized();
             }
 
-            var response = await _categoryService.EditCategoryAsync(userIdClaim.Value, categoryId, request);
-            if (response == null)
-            {
-                return NotFound();
-            }
+            var response = await _writeCategoryService.EditCategoryAsync(userIdClaim.Value, categoryId, request);
             return Ok(response);
         }
 
+
+        [EnableRateLimiting("General")]
         [Authorize]
         [HttpGet("get-categories")]
         public async Task<IActionResult> GetCategoriesAsync()
@@ -63,10 +69,10 @@ namespace BudgetTracker.Features.Categories.Controllers
                 return Unauthorized();
             }
 
-            var response = await _categoryService.GetCategoriesAsync(userIdClaim.Value);
-            
+            var response = await _readCategoryService.GetCategoriesAsync(userIdClaim.Value);
             return Ok(response);
         }
+
 
 
         [Authorize]
@@ -80,12 +86,8 @@ namespace BudgetTracker.Features.Categories.Controllers
                 return Unauthorized();
             }
 
-            var response = await _categoryService.DeleteCategoryAsync(userIdClaim.Value, categoryId);
-            if (!response)
-            {
-                return NotFound();
-            }
-            return NoContent();
+            var response = await _writeCategoryService.DeleteCategoryAsync(userIdClaim.Value, categoryId);
+            return Ok(response);
         }
 
 

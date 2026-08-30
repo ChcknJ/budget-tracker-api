@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 namespace BudgetTracker.Features.Summary.Controllers
@@ -17,7 +18,7 @@ namespace BudgetTracker.Features.Summary.Controllers
             _summaryService = summary;
         }
 
-
+        [EnableRateLimiting("General")]
         [Authorize]
         [HttpGet("get-summary")]
         public async Task<IActionResult> GetSummaryAsync(DateOnly month)

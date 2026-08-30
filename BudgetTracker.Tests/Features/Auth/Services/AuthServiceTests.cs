@@ -117,15 +117,12 @@ public class AuthServiceTests
         var registerResult = await service.RegisterAsync(new RegisterRequest("eisk", "Password1", "eisk@test.com"), CancellationToken.None);
         var originalToken = registerResult.Response!.RefreshToken;
 
-        // rotate once — originalToken is now revoked, a new token exists
         var firstRefresh = await service.RefreshAsync(new RefreshRequest(originalToken), CancellationToken.None);
         var newActiveToken = firstRefresh.Response!.RefreshToken;
 
-        // replay the already-revoked original token — should trigger family revocation
         var replayResult = await service.RefreshAsync(new RefreshRequest(originalToken), CancellationToken.None);
         Assert.False(replayResult.Success);
 
-        // the token that was still valid a moment ago should now ALSO be revoked
         var secondRefreshAttempt = await service.RefreshAsync(new RefreshRequest(newActiveToken), CancellationToken.None);
         Assert.False(secondRefreshAttempt.Success);
     }

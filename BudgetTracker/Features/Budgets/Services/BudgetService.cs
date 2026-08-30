@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace BudgetTracker.Features.Budgets.Services
 {
-    public class BudgetService : IBudgetService
+    public class BudgetService : IReadBudgetService, IWriteBudgetService
     {
         private readonly AppDbContext _context;
 
@@ -16,14 +16,18 @@ namespace BudgetTracker.Features.Budgets.Services
             _context = context;
         }
 
-        public async Task<BudgetResponse?> CreateBudgetAsync (Guid userId, BudgetRequest request)
+        public async Task<BudgetResult> CreateBudgetAsync (Guid userId, BudgetRequest request)
         {
             // check duplicate
             bool isDuplicate = await _context.Budgets.AnyAsync(b => b.UserId == userId && b.Month == request.Month);
 
             if (isDuplicate)
-            {   
-                return null;
+            {
+                return new BudgetResult(
+                    Success: false,
+                    ErrorType: BudgetErrorType.InvalidRequest,
+                    ErrorMessage: "Something went wrong.",
+                    Response: null);
             }
 
             var budget = new Budget
@@ -36,63 +40,81 @@ namespace BudgetTracker.Features.Budgets.Services
             await _context.Budgets.AddAsync(budget);
             await _context.SaveChangesAsync();
 
-            return new BudgetResponse
-            {
-                Id = budget.Id,
-                Month = budget.Month,
-                Amount = budget.Amount
-            };
+            return new BudgetResult(
+                Success: true,
+                ErrorType: null,
+                ErrorMessage: null,
+                Response: new BudgetResponse(
+                    Id: budget.Id,
+                    Month: budget.Month,
+                    Amount: budget.Amount));
         }
 
-        public async Task<BudgetResponse?> EditBudgetAsync(Guid userId, DateOnly month, BudgetRequest request)
+        public async Task<BudgetResult> EditBudgetAsync(Guid userId, DateOnly month, BudgetRequest request)
         {
-            var budget = await _context.Budgets.FirstOrDefaultAsync(b => b.UserId == userId &&b.Month == month);
+            var budget = await _context.Budgets.FirstOrDefaultAsync(b => b.UserId == userId && b.Month == month);
 
             if (budget == null)
             {
-                return null;
+                return new BudgetResult(
+                    Success: false,
+                    ErrorType: BudgetErrorType.InvalidRequest,
+                    ErrorMessage: "Something went wrong.",
+                    Response: null);
             }
 
             budget.Amount = request.Amount;
 
             await _context.SaveChangesAsync();
 
-            return new BudgetResponse
-            {
-                Id = budget.Id,
-                Month = budget.Month,
-                Amount = budget.Amount
-            };
+            return new BudgetResult(
+                Success: true,
+                ErrorType: null,
+                ErrorMessage: null,
+                Response: new BudgetResponse(
+                    Id: budget.Id,
+                    Month: budget.Month,
+                    Amount: budget.Amount));
         }
 
 
-        public async Task<BudgetResponse?> GetBudgetAsync (Guid userId, DateOnly month)
+        public async Task<BudgetResult> GetBudgetAsync (Guid userId, DateOnly month)
         {
             var budget = await _context.Budgets.FirstOrDefaultAsync(b =>b.UserId == userId && b.Month == month);
 
             if (budget == null)
             {
-                return null;
+                return new BudgetResult(
+                    Success: false,
+                    ErrorType: BudgetErrorType.InvalidRequest,
+                    ErrorMessage: "Something went wrong.",
+                    Response: null);
             }
 
-            return new BudgetResponse
-            {
-                Id = budget.Id,
-                Month = budget.Month,
-                Amount = budget.Amount
-            };
+            return new BudgetResult(
+                Success: true,
+                ErrorType: null,
+                ErrorMessage: null,
+                Response: new BudgetResponse(
+                    Id: budget.Id,
+                    Month: budget.Month,
+                    Amount: budget.Amount));
         }
 
-        public async Task<List<BudgetResponse>> GetAllBudgetsAsync (Guid userId)
+        public async Task<BudgetListResult> GetAllBudgetsAsync (Guid userId)
         {
-            var budgets = await _context.Budgets.Where(b => b.UserId == userId).Select(b => new BudgetResponse
-            {
-                Id = b.Id,
-                Month = b.Month,
-                Amount = b.Amount
-            }).ToListAsync();
+            var totalBudgets = await _context.Budgets.Where(b => b.UserId == userId).CountAsync();
+            var budgets = await _context.Budgets
+                .Where(b => b.UserId == userId)
+                .Select(b => new BudgetResponse(
+                Id: b.Id,
+                Month: b.Month,
+                Amount: b.Amount))
+                .ToListAsync();
 
-            return budgets;
+            return new BudgetListResult(
+                TotalBudgets: totalBudgets,
+                Items: budgets);
         }
     }
 }

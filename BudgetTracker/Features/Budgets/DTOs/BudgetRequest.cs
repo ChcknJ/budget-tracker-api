@@ -1,8 +1,6 @@
 ﻿namespace BudgetTracker.Features.Budgets.DTOs
 {
-    public class BudgetRequest
-    {
-        public DateOnly Month { get; set; }
-        public decimal Amount { get; set; }
-    }
+    public record BudgetRequest(
+        DateOnly Month,
+        decimal Amount);
 }

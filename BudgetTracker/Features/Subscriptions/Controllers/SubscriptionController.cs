@@ -3,6 +3,7 @@ using BudgetTracker.Features.Subscriptions.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 namespace BudgetTracker.Features.Subscriptions.Controllers
@@ -11,14 +12,16 @@ namespace BudgetTracker.Features.Subscriptions.Controllers
     [ApiController]
     public class SubscriptionController : ControllerBase
     {
-        private readonly ISubscriptionService _subscriptionService;
+        private readonly IReadSubscriptionService _readSubscriptionService;
+        private readonly IWriteSubscriptionService _writeSubscriptionService;
 
-        public SubscriptionController (ISubscriptionService subscriptionService)
+        public SubscriptionController (IReadSubscriptionService readSubscriptionService, IWriteSubscriptionService writeSubscriptionService)
         {
-            _subscriptionService = subscriptionService;
+            _writeSubscriptionService = writeSubscriptionService;
+            _readSubscriptionService = readSubscriptionService;
         }
 
-
+        [EnableRateLimiting("General")]
         [Authorize]
         [HttpPost("create-subscription")]
         public async Task<IActionResult> CreateSubscriptionAsync (SubscriptionRequest request)
@@ -30,11 +33,11 @@ namespace BudgetTracker.Features.Subscriptions.Controllers
                 return Unauthorized();
             }
 
-            var response = await _subscriptionService.CreateSubscriptionAsync(userId.Value, request);
-
+            var response = await _writeSubscriptionService.CreateSubscriptionAsync(userId.Value, request);
             return Ok(response);
         }
 
+        [EnableRateLimiting("General")]
         [Authorize]
         [HttpPatch("edit-subscription/{subscriptionId}")]
         public async Task<IActionResult> EditSubscriptionAsync (Guid subscriptionId, SubscriptionRequest request)
@@ -45,7 +48,7 @@ namespace BudgetTracker.Features.Subscriptions.Controllers
                 return Unauthorized();
             }
 
-            var response = await _subscriptionService.EditSubscriptionAsync(userId.Value, subscriptionId, request);
+            var response = await _writeSubscriptionService.EditSubscriptionAsync(userId.Value, subscriptionId, request);
             if (response == null)
             {
                 return NotFound();
@@ -54,6 +57,7 @@ namespace BudgetTracker.Features.Subscriptions.Controllers
         }
 
 
+        [EnableRateLimiting("General")]
         [Authorize]
         [HttpDelete("cancel-subscription/{subscriptionId}")]
         public async Task<IActionResult> CancelSubscriptionAsync (Guid subscriptionId)
@@ -65,15 +69,46 @@ namespace BudgetTracker.Features.Subscriptions.Controllers
                 return Unauthorized();
             }
 
-            var response = await _subscriptionService.CancelSubscriptionAsync(userId.Value, subscriptionId);
-            if (!response)
-            {
-                return NotFound();
-            }
-            return NoContent();
+            var response = await _writeSubscriptionService.CancelSubscriptionAsync(userId.Value, subscriptionId);
+            return Ok(response);
         }
 
 
+        [EnableRateLimiting("General")]
+        [Authorize]
+        [HttpDelete("activate-subscription/{subscriptionId}")]
+        public async Task<IActionResult> ActivateSubscriptionAsync(Guid subscriptionId)
+        {
+            var userId = GetUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            var response = await _writeSubscriptionService.ActivateSubscriptionAsync(userId.Value, subscriptionId);
+            return Ok(response);
+        }
+
+
+        [EnableRateLimiting("General")]
+        [Authorize]
+        [HttpDelete("delete-subscription/{subscriptionId}")]
+        public async Task<IActionResult> DeleteSubscriptionAsync(Guid subscriptionId)
+        {
+            var userId = GetUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            var response = await _writeSubscriptionService.DeleteSubscriptionAsync(userId.Value, subscriptionId);
+            return Ok(response);
+        }
+
+
+        [EnableRateLimiting("General")]
         [Authorize]
         [HttpGet("get-subscriptions")]
         public async Task<IActionResult> GetSubscriptionsAsync()
@@ -85,7 +120,7 @@ namespace BudgetTracker.Features.Subscriptions.Controllers
                 return Unauthorized();
             }
 
-            var response = await _subscriptionService.GetSubscriptionsAsync(userId.Value);
+            var response = await _readSubscriptionService.GetSubscriptionsAsync(userId.Value);
             return Ok(response);
         }
 

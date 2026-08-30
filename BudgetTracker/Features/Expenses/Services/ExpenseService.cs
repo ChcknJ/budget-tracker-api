@@ -139,8 +139,8 @@ namespace BudgetTracker.Features.Expenses.Services
                     ErrorMessage: "Something went wrong.",
                     Response: null);
             }
-        
-            _context.Expenses.Remove(expense);
+
+            expense.DeletedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
             return new ExpenseResult(

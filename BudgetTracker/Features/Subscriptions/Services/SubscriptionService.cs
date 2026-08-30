@@ -1,12 +1,14 @@
 ﻿using BudgetTracker.Database;
+using BudgetTracker.Features.Categories.Models;
 using BudgetTracker.Features.Subscriptions.DTOs;
 using BudgetTracker.Features.Subscriptions.Interfaces;
 using BudgetTracker.Features.Subscriptions.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Xml.Linq;
 
 namespace BudgetTracker.Features.Subscriptions.Services
 {
-    public class SubscriptionService : ISubscriptionService
+    public class SubscriptionService : IWriteSubscriptionService, IReadSubscriptionService
     {
         private readonly AppDbContext _appDbContext;
 
@@ -16,7 +18,7 @@ namespace BudgetTracker.Features.Subscriptions.Services
         }
 
 
-        public async Task<SubscriptionResponse> CreateSubscriptionAsync (Guid userId, SubscriptionRequest request)
+        public async Task<SubscriptionResult> CreateSubscriptionAsync (Guid userId, SubscriptionRequest request)
         {
             var subscription = new Subscription
             {
@@ -32,27 +34,35 @@ namespace BudgetTracker.Features.Subscriptions.Services
             await _appDbContext.Subscriptions.AddAsync(subscription);
             await _appDbContext.SaveChangesAsync();
 
-            return new SubscriptionResponse
-            {
-                Id = subscription.Id,
-                CategoryId = subscription.CategoryId,
-                Name = subscription.Name,
-                Amount = subscription.Amount,
-                StartDate = subscription.StartDate,
-                EndDate = subscription.EndDate,
-                BillingCycle = subscription.BillingCycle,
-                IsActive = subscription.IsActive
-            };
+
+            return new SubscriptionResult(
+                Success: true,
+                ErrorType: null,
+                ErrorMessage: null,
+                Response: new SubscriptionResponse(
+                    Id:subscription.Id,
+                    CategoryId:subscription.CategoryId,
+                    Name:subscription.Name,
+                    Amount:subscription.Amount,
+                    StartDate:subscription.StartDate,
+                    EndDate:subscription.EndDate,
+                    BillingCycle:subscription.BillingCycle,
+                    IsActive:subscription.IsActive
+                    ));
         }
 
 
-        public async Task<SubscriptionResponse?> EditSubscriptionAsync (Guid userId, Guid subscriptionId, SubscriptionRequest request)
+        public async Task<SubscriptionResult> EditSubscriptionAsync (Guid userId, Guid subscriptionId, SubscriptionRequest request)
         {
             var subscription = await _appDbContext.Subscriptions.FirstOrDefaultAsync(s => s.UserId == userId && s.Id == subscriptionId);
 
             if (subscription==null)
             {
-                return null;
+                return new SubscriptionResult(
+                Success: true,
+                ErrorType: SubscriptionErrorType.InvalidRequest,
+                ErrorMessage: "Something went wrong.",
+                Response: null);
             }
 
             subscription.CategoryId = request.CategoryId;
@@ -64,51 +74,138 @@ namespace BudgetTracker.Features.Subscriptions.Services
 
             await _appDbContext.SaveChangesAsync();
 
-            return new SubscriptionResponse
-            {
-                Id = subscription.Id,
-                CategoryId = subscription.CategoryId,
-                Name = subscription.Name,
-                Amount = subscription.Amount,
-                StartDate = subscription.StartDate,
-                EndDate = subscription.EndDate,
-                BillingCycle = subscription.BillingCycle,
-                IsActive = subscription.IsActive
-            };
+            return new SubscriptionResult(
+                Success: true,
+                ErrorType: null,
+                ErrorMessage: null,
+                Response: new SubscriptionResponse(
+                    Id: subscription.Id,
+                    CategoryId: subscription.CategoryId,
+                    Name: subscription.Name,
+                    Amount: subscription.Amount,
+                    StartDate: subscription.StartDate,
+                    EndDate: subscription.EndDate,
+                    BillingCycle: subscription.BillingCycle,
+                    IsActive: subscription.IsActive
+                    ));
         }
 
 
-        public async Task<bool> CancelSubscriptionAsync (Guid userId, Guid subscriptionId)
+        public async Task<SubscriptionResult> CancelSubscriptionAsync (Guid userId, Guid subscriptionId)
         {
             var subscription = await _appDbContext.Subscriptions.FirstOrDefaultAsync(s => s.UserId == userId && s.Id == subscriptionId);
 
             if (subscription == null)
             {
-                return false;
+                return new SubscriptionResult(
+                Success: true,
+                ErrorType: SubscriptionErrorType.InvalidRequest,
+                ErrorMessage: "Something went wrong.",
+                Response: null);
             }
 
             subscription.IsActive = false;
             await _appDbContext.SaveChangesAsync();
 
-            return true;
+            return new SubscriptionResult(
+                Success: true,
+                ErrorType: null,
+                ErrorMessage: null,
+                Response: new SubscriptionResponse(
+                    Id: subscription.Id,
+                    CategoryId: subscription.CategoryId,
+                    Name: subscription.Name,
+                    Amount: subscription.Amount,
+                    StartDate: subscription.StartDate,
+                    EndDate: subscription.EndDate,
+                    BillingCycle: subscription.BillingCycle,
+                    IsActive: subscription.IsActive
+                    ));
         }
 
 
-        public async Task<List<SubscriptionResponse>> GetSubscriptionsAsync (Guid userId)
+        public async Task<SubscriptionResult> ActivateSubscriptionAsync(Guid userId, Guid subscriptionId)
         {
-            List<SubscriptionResponse> subscriptions = await _appDbContext.Subscriptions.Where(s => s.UserId == userId).Select(s=> new SubscriptionResponse
-            {
-                Id = s.Id,
-                CategoryId = s.CategoryId,
-                Name = s.Name,
-                Amount = s.Amount,
-                StartDate = s.StartDate,
-                EndDate = s.EndDate,
-                BillingCycle = s.BillingCycle,
-                IsActive = s.IsActive
-            }).ToListAsync();
+            var subscription = await _appDbContext.Subscriptions.FirstOrDefaultAsync(s => s.UserId == userId && s.Id == subscriptionId);
 
-            return subscriptions;
+            if (subscription == null)
+            {
+                return new SubscriptionResult(
+                Success: true,
+                ErrorType: SubscriptionErrorType.InvalidRequest,
+                ErrorMessage: "Something went wrong.",
+                Response: null);
+            }
+
+            subscription.IsActive = true;
+            await _appDbContext.SaveChangesAsync();
+
+            return new SubscriptionResult(
+                Success: true,
+                ErrorType: null,
+                ErrorMessage: null,
+                Response: new SubscriptionResponse(
+                    Id: subscription.Id,
+                    CategoryId: subscription.CategoryId,
+                    Name: subscription.Name,
+                    Amount: subscription.Amount,
+                    StartDate: subscription.StartDate,
+                    EndDate: subscription.EndDate,
+                    BillingCycle: subscription.BillingCycle,
+                    IsActive: subscription.IsActive
+                    ));
+        }
+
+        public async Task<SubscriptionResult> DeleteSubscriptionAsync(Guid userId, Guid subscriptionId)
+        {
+            var subscription = await _appDbContext.Subscriptions.FirstOrDefaultAsync(s => s.UserId == userId && s.Id == subscriptionId);
+
+            if (subscription == null)
+            {
+                return new SubscriptionResult(
+                Success: true,
+                ErrorType: SubscriptionErrorType.InvalidRequest,
+                ErrorMessage: "Something went wrong.",
+                Response: null);
+            }
+
+            subscription.DeletedAt = DateTime.UtcNow;
+            await _appDbContext.SaveChangesAsync();
+
+            return new SubscriptionResult(
+                Success: true,
+                ErrorType: null,
+                ErrorMessage: null,
+                Response: new SubscriptionResponse(
+                    Id: subscription.Id,
+                    CategoryId: subscription.CategoryId,
+                    Name: subscription.Name,
+                    Amount: subscription.Amount,
+                    StartDate: subscription.StartDate,
+                    EndDate: subscription.EndDate,
+                    BillingCycle: subscription.BillingCycle,
+                    IsActive: subscription.IsActive
+                    ));
+        }
+
+
+        public async Task<SubscriptionListResult> GetSubscriptionsAsync (Guid userId)
+        {
+            int totalSubscription = await _appDbContext.Subscriptions.Where(s => s.UserId == userId).CountAsync();
+
+            var subscriptions = await _appDbContext.Subscriptions.Where(s => s.UserId == userId).Select(s => new SubscriptionResponse(
+                    Id: s.Id,
+                    CategoryId: s.CategoryId,
+                    Name: s.Name,
+                    Amount: s.Amount,
+                    StartDate: s.StartDate,
+                    EndDate: s.EndDate,
+                    BillingCycle: s.BillingCycle,
+                    IsActive: s.IsActive)).ToListAsync();
+
+            return new SubscriptionListResult (
+                TotalSubscription: totalSubscription,
+                Subscriptions: subscriptions);
         }
     }
 }

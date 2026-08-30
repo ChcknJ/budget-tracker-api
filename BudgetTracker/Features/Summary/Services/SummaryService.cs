@@ -53,11 +53,9 @@ namespace BudgetTracker.Features.Summary.Services
                         expense.Amount
                     })
                 .GroupBy(x => x.CategoryName)
-                .Select(g => new CategoryBreakdownResponse
-                {
-                    Name = g.Key,
-                    TotalExpense = g.Sum(x => x.Amount)
-                })
+                .Select(g => new CategoryBreakdownResponse(
+                    Name: g.Key,
+                    TotalExpense: g.Sum(x => x.Amount)))
                 .ToListAsync();
 
             var totalExpenses = expenseSummary?.TotalExpenses ?? 0;
@@ -65,20 +63,18 @@ namespace BudgetTracker.Features.Summary.Services
             var averageExpense = expenseSummary?.AverageExpense ?? 0;
             var largestExpense = expenseSummary?.LargestExpense ?? 0;
 
-            return new SummaryResponse
-            {
-                TotalExpenses = totalExpenses,
-                NumberOfExpenses = numberOfExpenses,
-                AverageExpense = averageExpense,
-                LargestExpense = largestExpense,
+            return new SummaryResponse(
+                TotalExpenses: totalExpenses,
+                NumberOfExpenses: numberOfExpenses,
+                AverageExpense: averageExpense,
+                LargestExpense: largestExpense,
 
-                BudgetForTheMonth = budget?.Amount,
-                RemainingBudget = budget == null
+                BudgetForTheMonth: budget?.Amount,
+                RemainingBudget: budget == null
                     ? null
                     : budget.Amount - totalExpenses,
 
-                CategoryBreakdown = categoryBreakdown
-            };
+                CategoryBreakdown: categoryBreakdown);
         }
     }
 }

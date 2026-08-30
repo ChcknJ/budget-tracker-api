@@ -43,6 +43,7 @@ namespace BudgetTracker.Features.Auth.Controllers
             return Created(string.Empty, response);
         }
 
+
         [EnableRateLimiting("Auth")]
         [HttpPost("login")]
         public async Task<IActionResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
@@ -57,6 +58,7 @@ namespace BudgetTracker.Features.Auth.Controllers
             return Ok(response);
         }
 
+
         [EnableRateLimiting("Auth")]
         [HttpPost("refresh")]
         public async Task<IActionResult> RefreshAsync(RefreshRequest request, CancellationToken cancellationToken)
@@ -70,6 +72,7 @@ namespace BudgetTracker.Features.Auth.Controllers
 
             return Ok(response);
         }
+
 
         [Authorize]
         [HttpPost("logout")]
