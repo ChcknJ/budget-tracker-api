@@ -2,6 +2,7 @@
 {
     public enum SubscriptionErrorType
     {
-        InvalidRequest
+        InvalidRequest,
+        SubscriptionNotFound
     }
 }

@@ -2,9 +2,10 @@
 {
     public enum ExpenseErrorType
     {
+        ExpenseNotFound,
         UserNotFound,
         InvalidRequest,
         InvalidCategory,
-        InvalidSubsription
+        InvalidSubscription
     }
 }

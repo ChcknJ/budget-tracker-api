@@ -4,7 +4,7 @@ namespace BudgetTracker.Features.Subscriptions.Interfaces
 {
     public interface IReadSubscriptionService
     {
-        Task<SubscriptionListResult> GetSubscriptionsAsync(Guid userId);
+        Task<SubscriptionListResult> GetSubscriptionsAsync(Guid userId, CancellationToken cancellationToken);
 
     }
 }

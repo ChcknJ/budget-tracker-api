@@ -4,6 +4,6 @@ namespace BudgetTracker.Features.Categories.Interfaces
 {
     public interface IReadCategoryService
     {
-        Task<CategoryListResult> GetCategoriesAsync(Guid userId);
+        Task<CategoryListResult> GetCategoriesAsync(Guid userId, CancellationToken cancellationToken);
     }
 }

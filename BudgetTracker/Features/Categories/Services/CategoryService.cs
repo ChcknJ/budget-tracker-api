@@ -17,8 +17,9 @@ namespace BudgetTracker.Features.Categories.Services
         }
 
 
+        // !!!! TODO: Name duplicate change (createcategory)
 
-        public async Task<CategoryResult> CreateCategoryAsync(Guid userId, CategoryRequest request)
+        public async Task<CategoryResult> CreateCategoryAsync(Guid userId, CategoryRequest request, CancellationToken cancellationToken)
         {
             Category category = new Category
             {
@@ -26,8 +27,8 @@ namespace BudgetTracker.Features.Categories.Services
                 Name = request.Name
             };
 
-            await _context.Categories.AddAsync(category);
-            await _context.SaveChangesAsync();
+            await _context.Categories.AddAsync(category, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
 
             return new CategoryResult(
                 Success: true,
@@ -39,21 +40,21 @@ namespace BudgetTracker.Features.Categories.Services
         }
 
 
-        public async Task<CategoryResult> EditCategoryAsync(Guid userId,Guid categoryId, CategoryRequest request)
+        public async Task<CategoryResult> EditCategoryAsync(Guid userId,Guid categoryId, CategoryRequest request, CancellationToken cancellationToken)
         {
-            var category = await _context.Categories.FirstOrDefaultAsync(c => c.UserId == userId && c.Id == categoryId);
+            var category = await _context.Categories.FirstOrDefaultAsync(c => c.UserId == userId && c.Id == categoryId, cancellationToken);
 
             if (category == null)
             {
                 return new CategoryResult(
                 Success: false,
-                ErrorType: CategoryErrorType.InvalidRequest,
-                ErrorMessage: "Something went wrong.",
+                ErrorType: CategoryErrorType.CategoryNotFound,
+                ErrorMessage: "Category cannot be found.",
                 Response: null);
             }
 
             category.Name = request.Name;
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
 
             return new CategoryResult(
                 Success: true,
@@ -65,21 +66,21 @@ namespace BudgetTracker.Features.Categories.Services
         }
 
 
-        public async Task<CategoryResult> DeleteCategoryAsync(Guid userId, Guid categoryId)
+        public async Task<CategoryResult> DeleteCategoryAsync(Guid userId, Guid categoryId, CancellationToken cancellationToken)
         {
-            var category = await _context.Categories.FirstOrDefaultAsync(c => c.Id == categoryId && c.UserId == userId);
+            var category = await _context.Categories.FirstOrDefaultAsync(c => c.Id == categoryId && c.UserId == userId, cancellationToken);
 
             if (category == null)
             {
                 return new CategoryResult(
                 Success: false,
-                ErrorType: CategoryErrorType.InvalidRequest,
-                ErrorMessage: "Something went wrong.",
+                ErrorType: CategoryErrorType.CategoryNotFound,
+                ErrorMessage: "Category cannot be found.",
                 Response: null);
             }
 
-            _context.Categories.Remove(category);
-            await _context.SaveChangesAsync();
+            category.DeletedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync(cancellationToken);
 
             return new CategoryResult(
                 Success: true,
@@ -89,9 +90,9 @@ namespace BudgetTracker.Features.Categories.Services
         }
 
 
-        public async Task<CategoryListResult> GetCategoriesAsync(Guid userId)
+        public async Task<CategoryListResult> GetCategoriesAsync(Guid userId, CancellationToken cancellationToken)
         {
-            var totalCategories = await _context.Categories.Where(category => category.UserId == userId || category.UserId == null).CountAsync();
+            var totalCategories = await _context.Categories.Where(category => category.UserId == userId || category.UserId == null).CountAsync(cancellationToken);
 
             var categories = await _context.Categories
                 .Where(category => category.UserId == userId || category.UserId == null)
@@ -99,7 +100,7 @@ namespace BudgetTracker.Features.Categories.Services
                 new CategoryResponse(
                     Id: category.Id,
                     Name: category.Name))
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             return new CategoryListResult(
                 TotalCategories: totalCategories,

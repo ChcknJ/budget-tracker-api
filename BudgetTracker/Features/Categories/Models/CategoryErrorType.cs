@@ -2,7 +2,7 @@
 {
     public enum CategoryErrorType
     {
-        UserNotFound,
+        CategoryNotFound,
         InvalidRequest
     }
 }

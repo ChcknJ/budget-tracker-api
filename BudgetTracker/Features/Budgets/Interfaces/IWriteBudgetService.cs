@@ -4,7 +4,7 @@ namespace BudgetTracker.Features.Budgets.Interfaces
 {
     public interface IWriteBudgetService
     {
-        Task<BudgetResult> CreateBudgetAsync(Guid userId, BudgetRequest request);
-        Task<BudgetResult> EditBudgetAsync(Guid userId, DateOnly month, BudgetRequest request);
+        Task<BudgetResult> CreateBudgetAsync(Guid userId, BudgetRequest request, CancellationToken cancellationToken);
+        Task<BudgetResult> EditBudgetAsync(Guid userId, DateOnly month, BudgetRequest request, CancellationToken cancellationToken);
     }
 }

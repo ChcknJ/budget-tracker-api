@@ -24,8 +24,8 @@ namespace BudgetTracker.Features.Users.Controllers
 
         [Authorize]
         [EnableRateLimiting("General")]
-        [HttpPost("get-profile")]
-        public async Task<IActionResult> GetUserAsync()
+        [HttpGet("get-profile")]
+        public async Task<IActionResult> GetUserAsync(CancellationToken cancellationToken)
         {
             var userId = GetUserId();
 
@@ -34,49 +34,34 @@ namespace BudgetTracker.Features.Users.Controllers
                 return Unauthorized();
             }
 
-            var response = await _readUserService.GetUserAsync(userId.Value);
+            var response = await _readUserService.GetUserAsync(userId.Value, cancellationToken);
 
-            if (!response.Success)
-            {
-                return response.ErrorType switch
-                {
-                    UserErrorType.UserNotFound => Unauthorized(response),
-                    _ => BadRequest(response)
-                };
-            }
-            return Ok(response);
-        }
-
-        [Authorize]
-        [EnableRateLimiting("General")]
-        [HttpPost("update-profile/{userId}")]
-        public async Task<IActionResult> UpdateUserAsync(UpdateUserRequest request)
-        {
-            var userId = GetUserId();
-
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
-
-            var response = await _writeUserService.UpdateUserAsync(userId.Value, request);
-
-            if (!response.Success)
-            {
-                return response.ErrorType switch
-                {
-                    UserErrorType.UserNotFound => Unauthorized(response),
-                    _ => BadRequest(response)
-                };
-            }
-            return Ok(response);
+            return response.Success ? Ok(response.Response) : MapError(response);
         }
 
 
         [Authorize]
         [EnableRateLimiting("General")]
-        [HttpPost("delete-profile/{userId}")]
-        public async Task<IActionResult> DeleteUserAsync()
+        [HttpPatch]
+        public async Task<IActionResult> UpdateUserAsync(UpdateUserRequest request, CancellationToken cancellationToken)
+        {
+            var userId = GetUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            var response = await _writeUserService.UpdateUserAsync(userId.Value, request, cancellationToken);
+
+            return response.Success ? Ok(response.Response) : MapError(response);
+        }
+
+
+        [Authorize]
+        [EnableRateLimiting("General")]
+        [HttpDelete]
+        public async Task<IActionResult> DeleteUserAsync(CancellationToken cancellationToken)
         {
             var userId = GetUserId();
 
@@ -87,17 +72,9 @@ namespace BudgetTracker.Features.Users.Controllers
 
 
 
-            var response = await _writeUserService.DeleteUserAsync(userId.Value);
+            var response = await _writeUserService.DeleteUserAsync(userId.Value, cancellationToken);
 
-            if (!response.Success)
-            {
-                return response.ErrorType switch
-                {
-                    UserErrorType.UserNotFound => Unauthorized(response),
-                    _ => BadRequest(response)
-                };
-            }
-            return Ok(response);
+            return response.Success ? NoContent() : MapError(response);
         }
 
         private Guid? GetUserId()
@@ -115,6 +92,16 @@ namespace BudgetTracker.Features.Users.Controllers
             }
 
             return userId;
+        }
+
+
+        private IActionResult MapError(UserResult result)
+        {
+            return result.ErrorType switch
+            {
+                UserErrorType.UserNotFound => NotFound(result.ErrorMessage),
+                _ => BadRequest(result.ErrorMessage)
+            };
         }
     }
 }

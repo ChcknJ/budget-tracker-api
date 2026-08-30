@@ -14,7 +14,7 @@ namespace BudgetTracker.Features.Summary.Services
             _context = context;
         }
 
-        public async Task<SummaryResponse> GetSummaryAsync(Guid userId, DateOnly month)
+        public async Task<SummaryResponse> GetSummaryAsync(Guid userId, DateOnly month, CancellationToken cancellationToken)
         {
             var startDate = new DateOnly(month.Year, month.Month, 1);
 
@@ -35,12 +35,12 @@ namespace BudgetTracker.Features.Summary.Services
                     AverageExpense = g.Average(e => e.Amount),
                     LargestExpense = g.Max(e => e.Amount)
                 })
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
             var budget = await _context.Budgets
                 .FirstOrDefaultAsync(b =>
                     b.UserId == userId &&
-                    b.Month == startDate);
+                    b.Month == startDate, cancellationToken);
 
             var categoryBreakdown = await expenseQuery
                 .Join(
@@ -56,7 +56,7 @@ namespace BudgetTracker.Features.Summary.Services
                 .Select(g => new CategoryBreakdownResponse(
                     Name: g.Key,
                     TotalExpense: g.Sum(x => x.Amount)))
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             var totalExpenses = expenseSummary?.TotalExpenses ?? 0;
             var numberOfExpenses = expenseSummary?.NumberOfExpenses ?? 0;

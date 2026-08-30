@@ -1,7 +1,12 @@
 ﻿using BudgetTracker.Features.Categories.DTOs;
 using BudgetTracker.Features.Categories.Interfaces;
+using BudgetTracker.Features.Categories.Models;
+using BudgetTracker.Features.Expenses.DTOs;
+using BudgetTracker.Features.Expenses.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Components.Forms.Mapping;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
@@ -26,7 +31,7 @@ namespace BudgetTracker.Features.Categories.Controllers
         [EnableRateLimiting("General")]
         [Authorize]
         [HttpPost("create-category")]
-        public async Task<IActionResult> CreateCategoryAsync(CategoryRequest request)
+        public async Task<IActionResult> CreateCategoryAsync(CategoryRequest request, CancellationToken cancellationToken)
         {
             var userIdClaim = GetUserId();
 
@@ -35,15 +40,15 @@ namespace BudgetTracker.Features.Categories.Controllers
                 return Unauthorized();
             }
 
-            var response = await _writeCategoryService.CreateCategoryAsync(userIdClaim.Value, request);
-            return Ok(response);
+            var response = await _writeCategoryService.CreateCategoryAsync(userIdClaim.Value, request, cancellationToken);
+            return response.Success ? CreatedAtAction(nameof(GetCategoriesAsync), new { }, response.Response) : MapError(response);
         }
 
 
         [EnableRateLimiting("General")]
         [Authorize]
         [HttpPatch("edit-category/{categoryId}")]
-        public async Task<IActionResult> EditCategoryAsync(Guid categoryId, CategoryRequest request)
+        public async Task<IActionResult> EditCategoryAsync(Guid categoryId, CategoryRequest request, CancellationToken cancellationToken)
         {
             var userIdClaim = GetUserId();
 
@@ -52,15 +57,15 @@ namespace BudgetTracker.Features.Categories.Controllers
                 return Unauthorized();
             }
 
-            var response = await _writeCategoryService.EditCategoryAsync(userIdClaim.Value, categoryId, request);
-            return Ok(response);
+            var response = await _writeCategoryService.EditCategoryAsync(userIdClaim.Value, categoryId, request, cancellationToken);
+            return response.Success ? Ok(response.Response) : MapError(response);
         }
 
 
         [EnableRateLimiting("General")]
         [Authorize]
         [HttpGet("get-categories")]
-        public async Task<IActionResult> GetCategoriesAsync()
+        public async Task<IActionResult> GetCategoriesAsync(CancellationToken cancellationToken)
         {
             var userIdClaim = GetUserId();
 
@@ -69,15 +74,15 @@ namespace BudgetTracker.Features.Categories.Controllers
                 return Unauthorized();
             }
 
-            var response = await _readCategoryService.GetCategoriesAsync(userIdClaim.Value);
+            var response = await _readCategoryService.GetCategoriesAsync(userIdClaim.Value, cancellationToken);
             return Ok(response);
         }
 
 
-
+        [EnableRateLimiting("General")]
         [Authorize]
         [HttpDelete("delete-category/{categoryId}")]
-        public async Task<IActionResult> DeleteCategoryAsync(Guid categoryId)
+        public async Task<IActionResult> DeleteCategoryAsync(Guid categoryId, CancellationToken cancellationToken)
         {
             var userIdClaim = GetUserId();
 
@@ -86,8 +91,8 @@ namespace BudgetTracker.Features.Categories.Controllers
                 return Unauthorized();
             }
 
-            var response = await _writeCategoryService.DeleteCategoryAsync(userIdClaim.Value, categoryId);
-            return Ok(response);
+            var response = await _writeCategoryService.DeleteCategoryAsync(userIdClaim.Value, categoryId, cancellationToken);
+            return response.Success ? NoContent() : MapError(response);
         }
 
 
@@ -107,6 +112,16 @@ namespace BudgetTracker.Features.Categories.Controllers
             }
 
             return userId;
+        }
+
+        private IActionResult MapError(CategoryResult result)
+        {
+            return result.ErrorType switch
+            {
+                CategoryErrorType.InvalidRequest => BadRequest(result.ErrorMessage),
+                CategoryErrorType.CategoryNotFound => NotFound(result.ErrorMessage),
+                _ => BadRequest(result.ErrorMessage)
+            };
         }
     }
 }

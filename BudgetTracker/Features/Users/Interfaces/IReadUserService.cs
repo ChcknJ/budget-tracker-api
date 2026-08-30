@@ -4,6 +4,6 @@ namespace BudgetTracker.Features.Users.Interfaces
 {
     public interface IReadUserService
     {
-        Task<UserResult> GetUserAsync(Guid userId); 
+        Task<UserResult> GetUserAsync(Guid userId, CancellationToken cancellationToken); 
     }
 }

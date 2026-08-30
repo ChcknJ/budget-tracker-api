@@ -17,8 +17,10 @@ namespace BudgetTracker.Features.Subscriptions.Services
             _appDbContext = context;
         }
 
+        // !!! TODO: No ownership/existence check on request.CategoryId before saving
 
-        public async Task<SubscriptionResult> CreateSubscriptionAsync (Guid userId, SubscriptionRequest request)
+
+        public async Task<SubscriptionResult> CreateSubscriptionAsync (Guid userId, SubscriptionRequest request, CancellationToken cancellationToken)
         {
             var subscription = new Subscription
             {
@@ -31,8 +33,8 @@ namespace BudgetTracker.Features.Subscriptions.Services
                 BillingCycle = request.BillingCycle
             };
 
-            await _appDbContext.Subscriptions.AddAsync(subscription);
-            await _appDbContext.SaveChangesAsync();
+            await _appDbContext.Subscriptions.AddAsync(subscription, cancellationToken);
+            await _appDbContext.SaveChangesAsync(cancellationToken);
 
 
             return new SubscriptionResult(
@@ -52,16 +54,16 @@ namespace BudgetTracker.Features.Subscriptions.Services
         }
 
 
-        public async Task<SubscriptionResult> EditSubscriptionAsync (Guid userId, Guid subscriptionId, SubscriptionRequest request)
+        public async Task<SubscriptionResult> EditSubscriptionAsync (Guid userId, Guid subscriptionId, SubscriptionRequest request, CancellationToken cancellationToken)
         {
-            var subscription = await _appDbContext.Subscriptions.FirstOrDefaultAsync(s => s.UserId == userId && s.Id == subscriptionId);
+            var subscription = await _appDbContext.Subscriptions.FirstOrDefaultAsync(s => s.UserId == userId && s.Id == subscriptionId, cancellationToken);
 
             if (subscription==null)
             {
                 return new SubscriptionResult(
-                Success: true,
-                ErrorType: SubscriptionErrorType.InvalidRequest,
-                ErrorMessage: "Something went wrong.",
+                Success: false,
+                ErrorType: SubscriptionErrorType.SubscriptionNotFound,
+                ErrorMessage: "Subscription cannot be found.",
                 Response: null);
             }
 
@@ -72,7 +74,7 @@ namespace BudgetTracker.Features.Subscriptions.Services
             subscription.EndDate = request.EndDate;
             subscription.BillingCycle = request.BillingCycle;
 
-            await _appDbContext.SaveChangesAsync();
+            await _appDbContext.SaveChangesAsync(cancellationToken);
 
             return new SubscriptionResult(
                 Success: true,
@@ -91,21 +93,21 @@ namespace BudgetTracker.Features.Subscriptions.Services
         }
 
 
-        public async Task<SubscriptionResult> CancelSubscriptionAsync (Guid userId, Guid subscriptionId)
+        public async Task<SubscriptionResult> CancelSubscriptionAsync (Guid userId, Guid subscriptionId, CancellationToken cancellationToken)
         {
-            var subscription = await _appDbContext.Subscriptions.FirstOrDefaultAsync(s => s.UserId == userId && s.Id == subscriptionId);
+            var subscription = await _appDbContext.Subscriptions.FirstOrDefaultAsync(s => s.UserId == userId && s.Id == subscriptionId, cancellationToken);
 
             if (subscription == null)
             {
                 return new SubscriptionResult(
-                Success: true,
-                ErrorType: SubscriptionErrorType.InvalidRequest,
-                ErrorMessage: "Something went wrong.",
+                Success: false,
+                ErrorType: SubscriptionErrorType.SubscriptionNotFound,
+                ErrorMessage: "Subscription cannot be found.",
                 Response: null);
             }
 
             subscription.IsActive = false;
-            await _appDbContext.SaveChangesAsync();
+            await _appDbContext.SaveChangesAsync(cancellationToken);
 
             return new SubscriptionResult(
                 Success: true,
@@ -124,21 +126,21 @@ namespace BudgetTracker.Features.Subscriptions.Services
         }
 
 
-        public async Task<SubscriptionResult> ActivateSubscriptionAsync(Guid userId, Guid subscriptionId)
+        public async Task<SubscriptionResult> ActivateSubscriptionAsync(Guid userId, Guid subscriptionId, CancellationToken cancellationToken)
         {
-            var subscription = await _appDbContext.Subscriptions.FirstOrDefaultAsync(s => s.UserId == userId && s.Id == subscriptionId);
+            var subscription = await _appDbContext.Subscriptions.FirstOrDefaultAsync(s => s.UserId == userId && s.Id == subscriptionId, cancellationToken);
 
             if (subscription == null)
             {
                 return new SubscriptionResult(
-                Success: true,
-                ErrorType: SubscriptionErrorType.InvalidRequest,
-                ErrorMessage: "Something went wrong.",
+                Success: false,
+                ErrorType: SubscriptionErrorType.SubscriptionNotFound,
+                ErrorMessage: "Subscription cannot be found.",
                 Response: null);
             }
 
             subscription.IsActive = true;
-            await _appDbContext.SaveChangesAsync();
+            await _appDbContext.SaveChangesAsync(cancellationToken);
 
             return new SubscriptionResult(
                 Success: true,
@@ -156,21 +158,21 @@ namespace BudgetTracker.Features.Subscriptions.Services
                     ));
         }
 
-        public async Task<SubscriptionResult> DeleteSubscriptionAsync(Guid userId, Guid subscriptionId)
+        public async Task<SubscriptionResult> DeleteSubscriptionAsync(Guid userId, Guid subscriptionId, CancellationToken cancellationToken)
         {
-            var subscription = await _appDbContext.Subscriptions.FirstOrDefaultAsync(s => s.UserId == userId && s.Id == subscriptionId);
+            var subscription = await _appDbContext.Subscriptions.FirstOrDefaultAsync(s => s.UserId == userId && s.Id == subscriptionId, cancellationToken);
 
             if (subscription == null)
             {
                 return new SubscriptionResult(
-                Success: true,
-                ErrorType: SubscriptionErrorType.InvalidRequest,
-                ErrorMessage: "Something went wrong.",
+                Success: false,
+                ErrorType: SubscriptionErrorType.SubscriptionNotFound,
+                ErrorMessage: "Subscription cannot be found.c",
                 Response: null);
             }
 
             subscription.DeletedAt = DateTime.UtcNow;
-            await _appDbContext.SaveChangesAsync();
+            await _appDbContext.SaveChangesAsync(cancellationToken);
 
             return new SubscriptionResult(
                 Success: true,
@@ -189,9 +191,9 @@ namespace BudgetTracker.Features.Subscriptions.Services
         }
 
 
-        public async Task<SubscriptionListResult> GetSubscriptionsAsync (Guid userId)
+        public async Task<SubscriptionListResult> GetSubscriptionsAsync (Guid userId, CancellationToken cancellationToken)
         {
-            int totalSubscription = await _appDbContext.Subscriptions.Where(s => s.UserId == userId).CountAsync();
+            int totalSubscription = await _appDbContext.Subscriptions.Where(s => s.UserId == userId).CountAsync(cancellationToken);
 
             var subscriptions = await _appDbContext.Subscriptions.Where(s => s.UserId == userId).Select(s => new SubscriptionResponse(
                     Id: s.Id,
@@ -201,7 +203,7 @@ namespace BudgetTracker.Features.Subscriptions.Services
                     StartDate: s.StartDate,
                     EndDate: s.EndDate,
                     BillingCycle: s.BillingCycle,
-                    IsActive: s.IsActive)).ToListAsync();
+                    IsActive: s.IsActive)).ToListAsync(cancellationToken);
 
             return new SubscriptionListResult (
                 TotalSubscription: totalSubscription,

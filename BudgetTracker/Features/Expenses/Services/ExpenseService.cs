@@ -17,31 +17,22 @@ namespace BudgetTracker.Features.Expenses.Services
         }
 
 
-        public async Task<ExpenseResult> CreateExpenseAsync(Guid userId, ExpenseRequest request)
+
+        // !!!!!TODO: Fix validation
+
+
+        public async Task<ExpenseResult> CreateExpenseAsync(Guid userId, ExpenseRequest request, CancellationToken cancellationToken)
         {
-            bool isValidCategory = await ValidateUserCategory(userId, request.CategoryId);
-            if (!isValidCategory)
+            bool isValid =await ValidateUser(userId, request.CategoryId, request.SubscriptionId, cancellationToken);
+
+            if (!isValid)
             {
                 return new ExpenseResult(
-                Success: false,
-                ErrorType: ExpenseErrorType.InvalidCategory,
-                ErrorMessage: "Something went wrong.",
-                Response: null);
-            }
-
-            if (request.SubscriptionId.HasValue)
-            {
-                bool isValidSubscription = await ValidateUserSubscription(userId, request.SubscriptionId);
-                if (!isValidSubscription)
-                {
-                    return new ExpenseResult(
                     Success: false,
-                    ErrorType: ExpenseErrorType.InvalidSubsription,
-                    ErrorMessage: "Something went wrong.",
+                    ErrorType: ExpenseErrorType.InvalidRequest,
+                    ErrorMessage: "Category or Subscription is not valid",
                     Response: null);
-                }
             }
-
 
             Expense expense = new Expense
             {
@@ -53,8 +44,8 @@ namespace BudgetTracker.Features.Expenses.Services
                 Date = request.Date
             };
 
-            await _context.Expenses.AddAsync(expense);
-            await _context.SaveChangesAsync();
+            await _context.Expenses.AddAsync(expense, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
 
             return new ExpenseResult(
                 Success: true,
@@ -69,40 +60,28 @@ namespace BudgetTracker.Features.Expenses.Services
                     Date: expense.Date));
         }
 
-        public async Task<ExpenseResult> EditExpenseAsync (Guid userId, Guid expenseId, ExpenseRequest request)
+        public async Task<ExpenseResult> EditExpenseAsync (Guid userId, Guid expenseId, ExpenseRequest request, CancellationToken cancellationToken)
         {
-            bool isValidCategory = await ValidateUserCategory(userId, request.CategoryId);
-            if (!isValidCategory)
+            bool isValid = await ValidateUser(userId, request.CategoryId, request.SubscriptionId, cancellationToken);
+
+            if (!isValid)
             {
                 return new ExpenseResult(
-                Success: false,
-                ErrorType: ExpenseErrorType.InvalidCategory,
-                ErrorMessage: "Something went wrong.",
-                Response: null);
-            }
-
-            if (request.SubscriptionId.HasValue)
-            {
-                bool isValidSubscription = await ValidateUserSubscription(userId, request.SubscriptionId);
-                if (!isValidSubscription)
-                {
-                    return new ExpenseResult(
                     Success: false,
-                    ErrorType: ExpenseErrorType.InvalidSubsription,
-                    ErrorMessage: "Something went wrong.",
+                    ErrorType: ExpenseErrorType.InvalidRequest,
+                    ErrorMessage: "Category or Subscription is not valid.",
                     Response: null);
-                }
             }
 
             var expense = await _context.Expenses
-                .FirstOrDefaultAsync(e => e.Id == expenseId && e.UserId == userId);
+                .FirstOrDefaultAsync(e => e.Id == expenseId && e.UserId == userId, cancellationToken);
 
             if (expense == null)
             {
                 return new ExpenseResult(
                 Success: false,
-                ErrorType: ExpenseErrorType.InvalidRequest,
-                ErrorMessage: "Something went wrong.",
+                ErrorType: ExpenseErrorType.ExpenseNotFound,
+                ErrorMessage: "Expense cannot be found.",
                 Response: null);
             }
 
@@ -112,7 +91,7 @@ namespace BudgetTracker.Features.Expenses.Services
             expense.Description = request.Description;
             expense.Date = request.Date;
 
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
 
             return new ExpenseResult(
                 Success: true,
@@ -127,21 +106,21 @@ namespace BudgetTracker.Features.Expenses.Services
                     Date: expense.Date));
         }
 
-        public async Task<ExpenseResult> DeleteExpenseAsync (Guid userId, Guid expenseId)
+        public async Task<ExpenseResult> DeleteExpenseAsync (Guid userId, Guid expenseId, CancellationToken cancellationToken)
         {
-            var expense = await _context.Expenses.FirstOrDefaultAsync(expense => expense.Id == expenseId && expense.UserId == userId);
+            var expense = await _context.Expenses.FirstOrDefaultAsync(expense => expense.Id == expenseId && expense.UserId == userId, cancellationToken);
 
             if (expense == null)
             {
                 return new ExpenseResult(
                     Success: false,
-                    ErrorType: ExpenseErrorType.InvalidRequest,
-                    ErrorMessage: "Something went wrong.",
+                    ErrorType: ExpenseErrorType.ExpenseNotFound,
+                    ErrorMessage: "Expense cannot be found.",
                     Response: null);
             }
 
             expense.DeletedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
 
             return new ExpenseResult(
                  Success: true,
@@ -150,7 +129,7 @@ namespace BudgetTracker.Features.Expenses.Services
                  Response: null);
         }
 
-        public async Task<ExpensePaginatedResult> GetFilteredExpensesAsync (Guid userId, ExpenseQueryRequest filter)
+        public async Task<ExpensePaginatedResult> GetFilteredExpensesAsync (Guid userId, ExpenseQueryRequest filter, CancellationToken cancellationToken)
         {
             // Filters
 
@@ -188,7 +167,7 @@ namespace BudgetTracker.Features.Expenses.Services
             }
 
 
-            var totalItems = await query.CountAsync();
+            var totalItems = await query.CountAsync(cancellationToken);
 
 
             var sortBy = filter.SortByRequest;
@@ -212,9 +191,6 @@ namespace BudgetTracker.Features.Expenses.Services
             };
 
 
-
-
-
             // Pagination
             var skip = (filter.PageNumber - 1) * filter.PageSize;
             query = query.Skip(skip).Take(filter.PageSize);
@@ -226,7 +202,7 @@ namespace BudgetTracker.Features.Expenses.Services
                 SubscriptionId:e.SubscriptionId,
                 Amount:e.Amount,
                 Description:e.Description,
-                Date:e.Date)).ToListAsync();
+                Date:e.Date)).ToListAsync(cancellationToken);
 
 
 
@@ -247,17 +223,23 @@ namespace BudgetTracker.Features.Expenses.Services
 
 
 
-        private async Task<bool> ValidateUserCategory(Guid userId, Guid categoryId)
-        {
-            // Validate Category userId==null Categories are universal category
-            var validCategory = await _context.Categories.AnyAsync(c => c.Id == categoryId && c.UserId == userId || c.UserId == null);
-            return validCategory;
-        }
 
-        private async Task<bool> ValidateUserSubscription(Guid userId, Guid? subscriptionId)
+        private async Task<bool> ValidateUser(Guid userId, Guid categoryId, Guid? subscriptionId, CancellationToken cancellationToken)
         {
-            var validSubscription = await _context.Categories.AnyAsync(s => s.Id == subscriptionId && s.UserId == userId);
-            return validSubscription;
+            var validCategory = await _context.Categories
+                .AnyAsync(c => c.Id == categoryId && (c.UserId == userId || c.UserId == null), cancellationToken);
+
+            if (!validCategory) return false;
+
+            if (subscriptionId.HasValue)
+            {
+                var validSubscription = await _context.Subscriptions
+                    .AnyAsync(s => s.Id == subscriptionId && s.UserId == userId, cancellationToken);
+
+                if (!validSubscription) return false;
+            }
+
+            return true;
         }
     }
 }

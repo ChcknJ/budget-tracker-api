@@ -1,6 +1,5 @@
 ﻿using BudgetTracker.Features.Summary.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
@@ -21,7 +20,7 @@ namespace BudgetTracker.Features.Summary.Controllers
         [EnableRateLimiting("General")]
         [Authorize]
         [HttpGet("get-summary")]
-        public async Task<IActionResult> GetSummaryAsync(DateOnly month)
+        public async Task<IActionResult> GetSummaryAsync(DateOnly month, CancellationToken cancellationToken)
         {
             var userId = GetUserId();
 
@@ -30,7 +29,7 @@ namespace BudgetTracker.Features.Summary.Controllers
                 return Unauthorized();
             }
 
-            var response = await _summaryService.GetSummaryAsync(userId.Value, month);
+            var response = await _summaryService.GetSummaryAsync(userId.Value, month, cancellationToken);
             return Ok(response);
         }
 

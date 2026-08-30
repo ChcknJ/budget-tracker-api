@@ -4,7 +4,7 @@ namespace BudgetTracker.Features.Users.Interfaces
 {
     public interface IWriteUserService
     {
-        Task<UserResult> UpdateUserAsync(Guid userId, UpdateUserRequest request);
-        Task<UserResult> DeleteUserAsync(Guid userId);
+        Task<UserResult> UpdateUserAsync(Guid userId, UpdateUserRequest request, CancellationToken cancellationToken);
+        Task<UserResult> DeleteUserAsync(Guid userId, CancellationToken cancellationToken);
     }
 }

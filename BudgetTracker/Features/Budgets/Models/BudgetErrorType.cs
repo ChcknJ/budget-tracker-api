@@ -3,6 +3,8 @@
     public enum BudgetErrorType
     {
         UserNotFound,
-        InvalidRequest
+        InvalidRequest,
+        DuplicateBudget,
+        BudgetNotFound
     }
 }

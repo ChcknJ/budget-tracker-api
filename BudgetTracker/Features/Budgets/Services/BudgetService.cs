@@ -16,29 +16,33 @@ namespace BudgetTracker.Features.Budgets.Services
             _context = context;
         }
 
-        public async Task<BudgetResult> CreateBudgetAsync (Guid userId, BudgetRequest request)
+
+        // !!!! TODO: Race condition between Any and SaveChange (CreateBudget)
+
+        public async Task<BudgetResult> CreateBudgetAsync (Guid userId, BudgetRequest request, CancellationToken cancellationToken)
         {
-            // check duplicate
-            bool isDuplicate = await _context.Budgets.AnyAsync(b => b.UserId == userId && b.Month == request.Month);
+            var normalizedMonth = NormalizeMonth(request.Month);
+
+            bool isDuplicate = await _context.Budgets.AnyAsync(b => b.UserId == userId && b.Month == normalizedMonth, cancellationToken);
 
             if (isDuplicate)
             {
                 return new BudgetResult(
                     Success: false,
-                    ErrorType: BudgetErrorType.InvalidRequest,
-                    ErrorMessage: "Something went wrong.",
+                    ErrorType: BudgetErrorType.InvalidRequest, 
+                    ErrorMessage: "Duplicate budget for the month.",
                     Response: null);
             }
 
             var budget = new Budget
             {
                 UserId = userId,
-                Month = request.Month,
+                Month = normalizedMonth,
                 Amount = request.Amount
             };
 
-            await _context.Budgets.AddAsync(budget);
-            await _context.SaveChangesAsync();
+            await _context.Budgets.AddAsync(budget, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
 
             return new BudgetResult(
                 Success: true,
@@ -50,22 +54,24 @@ namespace BudgetTracker.Features.Budgets.Services
                     Amount: budget.Amount));
         }
 
-        public async Task<BudgetResult> EditBudgetAsync(Guid userId, DateOnly month, BudgetRequest request)
+        public async Task<BudgetResult> EditBudgetAsync(Guid userId, DateOnly month, BudgetRequest request, CancellationToken cancellationToken)
         {
-            var budget = await _context.Budgets.FirstOrDefaultAsync(b => b.UserId == userId && b.Month == month);
+            var normalizedMonth = NormalizeMonth(month);
+
+            var budget = await _context.Budgets.FirstOrDefaultAsync(b => b.UserId == userId && b.Month == normalizedMonth, cancellationToken);
 
             if (budget == null)
             {
                 return new BudgetResult(
                     Success: false,
-                    ErrorType: BudgetErrorType.InvalidRequest,
-                    ErrorMessage: "Something went wrong.",
+                    ErrorType: BudgetErrorType.BudgetNotFound,
+                    ErrorMessage: "Budget cannot be found.",
                     Response: null);
             }
 
             budget.Amount = request.Amount;
 
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
 
             return new BudgetResult(
                 Success: true,
@@ -78,16 +84,18 @@ namespace BudgetTracker.Features.Budgets.Services
         }
 
 
-        public async Task<BudgetResult> GetBudgetAsync (Guid userId, DateOnly month)
+        public async Task<BudgetResult> GetBudgetAsync (Guid userId, DateOnly month, CancellationToken cancellationToken)
         {
-            var budget = await _context.Budgets.FirstOrDefaultAsync(b =>b.UserId == userId && b.Month == month);
+            var normalizedMonth = NormalizeMonth(month);
+
+            var budget = await _context.Budgets.FirstOrDefaultAsync(b =>b.UserId == userId && b.Month == normalizedMonth, cancellationToken);
 
             if (budget == null)
             {
                 return new BudgetResult(
                     Success: false,
-                    ErrorType: BudgetErrorType.InvalidRequest,
-                    ErrorMessage: "Something went wrong.",
+                    ErrorType: BudgetErrorType.BudgetNotFound,
+                    ErrorMessage: "Budget cannot be found.",
                     Response: null);
             }
 
@@ -101,20 +109,22 @@ namespace BudgetTracker.Features.Budgets.Services
                     Amount: budget.Amount));
         }
 
-        public async Task<BudgetListResult> GetAllBudgetsAsync (Guid userId)
+        public async Task<BudgetListResult> GetAllBudgetsAsync (Guid userId, CancellationToken cancellationToken)
         {
-            var totalBudgets = await _context.Budgets.Where(b => b.UserId == userId).CountAsync();
+            var totalBudgets = await _context.Budgets.Where(b => b.UserId == userId).CountAsync(cancellationToken);
             var budgets = await _context.Budgets
                 .Where(b => b.UserId == userId)
                 .Select(b => new BudgetResponse(
                 Id: b.Id,
                 Month: b.Month,
                 Amount: b.Amount))
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             return new BudgetListResult(
                 TotalBudgets: totalBudgets,
                 Items: budgets);
         }
+
+        private static DateOnly NormalizeMonth(DateOnly month) => new(month.Year, month.Month, 1);
     }
 }

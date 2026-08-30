@@ -1,5 +1,7 @@
 ﻿using BudgetTracker.Features.Budgets.DTOs;
 using BudgetTracker.Features.Budgets.Interfaces;
+using BudgetTracker.Features.Budgets.Models;
+using BudgetTracker.Features.Expenses.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -24,7 +26,7 @@ namespace BudgetTracker.Features.Budgets.Controllers
         [EnableRateLimiting("General")]
         [Authorize]
         [HttpPost("create-budget")]
-        public async Task<IActionResult> CreateBudgetAsync(BudgetRequest request)
+        public async Task<IActionResult> CreateBudgetAsync(BudgetRequest request, CancellationToken cancellationToken)
         {
             var userId = GetUserId();
 
@@ -33,15 +35,16 @@ namespace BudgetTracker.Features.Budgets.Controllers
                 return Unauthorized();
             }
 
-            var response = await _writeBudgetService.CreateBudgetAsync(userId.Value, request);
-            return Ok(response);
+            var response = await _writeBudgetService.CreateBudgetAsync(userId.Value, request, cancellationToken);
+
+            return response.Success ? CreatedAtAction(nameof(GetBudgetAsync), new { month = request.Month }, response.Response) : MapError(response);
         }
 
 
         [EnableRateLimiting("General")]
         [Authorize]
         [HttpPatch("edit-budget/{month}")]
-        public async Task<IActionResult> EditBudgetAsync( DateOnly month, BudgetRequest request)
+        public async Task<IActionResult> EditBudgetAsync( DateOnly month, BudgetRequest request, CancellationToken cancellationToken)
         {
             var userId = GetUserId();
 
@@ -50,15 +53,15 @@ namespace BudgetTracker.Features.Budgets.Controllers
                 return Unauthorized();
             }
 
-            var response = await _writeBudgetService.EditBudgetAsync( userId.Value, month, request);
-            return Ok(response);
+            var response = await _writeBudgetService.EditBudgetAsync( userId.Value, month, request, cancellationToken);
+            return response.Success ? Ok(response.Response) : MapError(response);
         }
 
 
         [EnableRateLimiting("General")]
         [Authorize]
         [HttpGet("get-budget/{month}")]
-        public async Task<IActionResult> GetBudgetAsync(DateOnly month)
+        public async Task<IActionResult> GetBudgetAsync(DateOnly month, CancellationToken cancellationToken)
         {
             var userId = GetUserId();
 
@@ -67,15 +70,15 @@ namespace BudgetTracker.Features.Budgets.Controllers
                 return Unauthorized();
             }
 
-            var response = await _readBudgetService.GetBudgetAsync( userId.Value, month);
-            return Ok(response);
+            var response = await _readBudgetService.GetBudgetAsync( userId.Value, month, cancellationToken);
+            return response.Success ? Ok(response.Response) : MapError(response);
         }
 
 
         [EnableRateLimiting("General")]
         [Authorize]
         [HttpGet("get-all-budgets")]
-        public async Task<IActionResult> GetAllBudgetsAsync()
+        public async Task<IActionResult> GetAllBudgetsAsync(CancellationToken cancellationToken)
         {
             var userId = GetUserId();
             if (userId == null)
@@ -84,7 +87,7 @@ namespace BudgetTracker.Features.Budgets.Controllers
             }
 
             var response = await _readBudgetService.GetAllBudgetsAsync(
-                userId.Value);
+                userId.Value, cancellationToken);
             return Ok(response);
         }
 
@@ -104,6 +107,18 @@ namespace BudgetTracker.Features.Budgets.Controllers
             }
 
             return userId;
+        }
+
+
+        private IActionResult MapError(BudgetResult result)
+        {
+            return result.ErrorType switch
+            {
+                BudgetErrorType.BudgetNotFound => NotFound(result.ErrorMessage),
+                BudgetErrorType.InvalidRequest => BadRequest(result.ErrorMessage),
+                BudgetErrorType.DuplicateBudget => Conflict(result.ErrorMessage),
+                _ => BadRequest(result.ErrorMessage)
+            };
         }
     }
 }

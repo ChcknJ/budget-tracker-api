@@ -1,7 +1,7 @@
 ﻿using BudgetTracker.Features.Subscriptions.DTOs;
 using BudgetTracker.Features.Subscriptions.Interfaces;
+using BudgetTracker.Features.Subscriptions.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
@@ -24,7 +24,7 @@ namespace BudgetTracker.Features.Subscriptions.Controllers
         [EnableRateLimiting("General")]
         [Authorize]
         [HttpPost("create-subscription")]
-        public async Task<IActionResult> CreateSubscriptionAsync (SubscriptionRequest request)
+        public async Task<IActionResult> CreateSubscriptionAsync (SubscriptionRequest request, CancellationToken cancellationToken)
         {
             var userId = GetUserId();
 
@@ -33,14 +33,14 @@ namespace BudgetTracker.Features.Subscriptions.Controllers
                 return Unauthorized();
             }
 
-            var response = await _writeSubscriptionService.CreateSubscriptionAsync(userId.Value, request);
-            return Ok(response);
+            var response = await _writeSubscriptionService.CreateSubscriptionAsync(userId.Value, request, cancellationToken);
+            return response.Success ? CreatedAtAction(nameof(GetSubscriptionsAsync), new { }, response.Response) : MapError(response);
         }
 
         [EnableRateLimiting("General")]
         [Authorize]
         [HttpPatch("edit-subscription/{subscriptionId}")]
-        public async Task<IActionResult> EditSubscriptionAsync (Guid subscriptionId, SubscriptionRequest request)
+        public async Task<IActionResult> EditSubscriptionAsync (Guid subscriptionId, SubscriptionRequest request, CancellationToken cancellationToken)
         {
             var userId = GetUserId();
             if (userId == null)
@@ -48,19 +48,16 @@ namespace BudgetTracker.Features.Subscriptions.Controllers
                 return Unauthorized();
             }
 
-            var response = await _writeSubscriptionService.EditSubscriptionAsync(userId.Value, subscriptionId, request);
-            if (response == null)
-            {
-                return NotFound();
-            }
-            return Ok(response);
+            var response = await _writeSubscriptionService.EditSubscriptionAsync(userId.Value, subscriptionId, request, cancellationToken);
+
+            return response.Success ? Ok(response.Response) : MapError(response);
         }
 
 
         [EnableRateLimiting("General")]
         [Authorize]
-        [HttpDelete("cancel-subscription/{subscriptionId}")]
-        public async Task<IActionResult> CancelSubscriptionAsync (Guid subscriptionId)
+        [HttpPatch("cancel-subscription/{subscriptionId}")]
+        public async Task<IActionResult> CancelSubscriptionAsync (Guid subscriptionId, CancellationToken cancellationToken)
         {
             var userId = GetUserId();
 
@@ -69,15 +66,15 @@ namespace BudgetTracker.Features.Subscriptions.Controllers
                 return Unauthorized();
             }
 
-            var response = await _writeSubscriptionService.CancelSubscriptionAsync(userId.Value, subscriptionId);
-            return Ok(response);
+            var response = await _writeSubscriptionService.CancelSubscriptionAsync(userId.Value, subscriptionId, cancellationToken);
+            return response.Success ? NoContent() : MapError(response);
         }
 
 
         [EnableRateLimiting("General")]
         [Authorize]
-        [HttpDelete("activate-subscription/{subscriptionId}")]
-        public async Task<IActionResult> ActivateSubscriptionAsync(Guid subscriptionId)
+        [HttpPatch("activate-subscription/{subscriptionId}")]
+        public async Task<IActionResult> ActivateSubscriptionAsync(Guid subscriptionId, CancellationToken cancellationToken)
         {
             var userId = GetUserId();
 
@@ -86,15 +83,16 @@ namespace BudgetTracker.Features.Subscriptions.Controllers
                 return Unauthorized();
             }
 
-            var response = await _writeSubscriptionService.ActivateSubscriptionAsync(userId.Value, subscriptionId);
-            return Ok(response);
+            var response = await _writeSubscriptionService.ActivateSubscriptionAsync(userId.Value, subscriptionId, cancellationToken);
+            return response.Success ? NoContent() : MapError(response);
+
         }
 
 
         [EnableRateLimiting("General")]
         [Authorize]
         [HttpDelete("delete-subscription/{subscriptionId}")]
-        public async Task<IActionResult> DeleteSubscriptionAsync(Guid subscriptionId)
+        public async Task<IActionResult> DeleteSubscriptionAsync(Guid subscriptionId, CancellationToken cancellationToken)
         {
             var userId = GetUserId();
 
@@ -103,15 +101,16 @@ namespace BudgetTracker.Features.Subscriptions.Controllers
                 return Unauthorized();
             }
 
-            var response = await _writeSubscriptionService.DeleteSubscriptionAsync(userId.Value, subscriptionId);
-            return Ok(response);
+            var response = await _writeSubscriptionService.DeleteSubscriptionAsync(userId.Value, subscriptionId, cancellationToken);
+            return response.Success ? NoContent() : MapError(response);
+
         }
 
 
         [EnableRateLimiting("General")]
         [Authorize]
         [HttpGet("get-subscriptions")]
-        public async Task<IActionResult> GetSubscriptionsAsync()
+        public async Task<IActionResult> GetSubscriptionsAsync(CancellationToken cancellationToken)
         {
             var userId = GetUserId();
 
@@ -120,7 +119,7 @@ namespace BudgetTracker.Features.Subscriptions.Controllers
                 return Unauthorized();
             }
 
-            var response = await _readSubscriptionService.GetSubscriptionsAsync(userId.Value);
+            var response = await _readSubscriptionService.GetSubscriptionsAsync(userId.Value, cancellationToken);
             return Ok(response);
         }
 
@@ -141,6 +140,15 @@ namespace BudgetTracker.Features.Subscriptions.Controllers
             }
 
             return userId;
+        }
+
+        private IActionResult MapError(SubscriptionResult result)
+        {
+            return result.ErrorType switch
+            {
+                SubscriptionErrorType.SubscriptionNotFound => NotFound(result.ErrorMessage),
+                _ => BadRequest(result.ErrorMessage)
+            };
         }
     }
 }
