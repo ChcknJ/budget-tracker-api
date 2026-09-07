@@ -23,6 +23,7 @@ using BudgetTracker.Database.Configs;
 using BudgetTracker.Features.Summary.Interfaces;
 using BudgetTracker.Features.Auth.Validators;
 using BudgetTracker.Filters;
+using Scalar.AspNetCore;
 
 namespace BudgetTracker
 {
@@ -65,25 +66,37 @@ namespace BudgetTracker
                 });
 
             // Services
+
             // Auth
             builder.Services.AddScoped<IWriteAuthServices, AuthService>();
+
             //Expense
-            builder.Services.AddScoped<IReadExpenseService, ExpenseService>();
-            builder.Services.AddScoped<IWriteExpenseService, ExpenseService>();
+            builder.Services.AddScoped<ExpenseService>();
+            builder.Services.AddScoped<IReadExpenseService>(sp => sp.GetRequiredService<ExpenseService>());
+            builder.Services.AddScoped<IWriteExpenseService>(sp => sp.GetRequiredService<ExpenseService>());
+
             //Category
-            builder.Services.AddScoped<IReadCategoryService, CategoryService>();
-            builder.Services.AddScoped<IWriteCategoryService, CategoryService>();
+            builder.Services.AddScoped<CategoryService>();
+            builder.Services.AddScoped<IReadCategoryService>(sp => sp.GetRequiredService<CategoryService>());
+            builder.Services.AddScoped<IWriteCategoryService>(sp => sp.GetRequiredService<CategoryService>());
+
             //Subscription
-            builder.Services.AddScoped<IReadSubscriptionService, SubscriptionService>();
-            builder.Services.AddScoped<IWriteSubscriptionService, SubscriptionService>();
+            builder.Services.AddScoped<SubscriptionService>();
+            builder.Services.AddScoped<IReadSubscriptionService>(sp => sp.GetRequiredService<SubscriptionService>());
+            builder.Services.AddScoped<IWriteSubscriptionService>(sp => sp.GetRequiredService<SubscriptionService>());
+
             //Budget
-            builder.Services.AddScoped<IReadBudgetService, BudgetService>();
-            builder.Services.AddScoped<IWriteBudgetService, BudgetService>();
+            builder.Services.AddScoped<BudgetService>();
+            builder.Services.AddScoped<IReadBudgetService>(sp => sp.GetRequiredService<BudgetService>());
+            builder.Services.AddScoped<IWriteBudgetService>(sp => sp.GetRequiredService<BudgetService>());
+
             //Summary
             builder.Services.AddScoped<ISummaryService, SummaryService>();
+
             //User
-            builder.Services.AddScoped<IReadUserService, UserService>();
-            builder.Services.AddScoped<IWriteUserService, UserService>();
+            builder.Services.AddScoped<UserService>();
+            builder.Services.AddScoped<IReadUserService>(sp => sp.GetRequiredService<UserService>());
+            builder.Services.AddScoped<IWriteUserService>(sp => sp.GetRequiredService<UserService>());
 
 
             builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -128,6 +141,7 @@ namespace BudgetTracker
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
+                app.MapScalarApiReference();
             }
 
             app.UseExceptionHandler(options => { });
